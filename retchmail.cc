@@ -1,3 +1,13 @@
+/*
+ * Worldvisions Weaver Software:
+ *   Copyright (C) 1997-2003 Net Integration Technologies, Inc.
+ *
+ * Avery's insanely fast alternative to Fetchmail
+ *
+ * This code is LGPL - see the file COPYING.LIB for a full copy of the
+ * license.
+ */
+
 #include "strutils.h"
 #include "uniconf.h"
 #include "wvlockfile.h"
@@ -758,7 +768,7 @@ int main(int argc, char **argv)
 		lvl = WvLog::Notice;
 	    break;
 	case 'V':
-	    wvcon->print("Retchmail version %s\n",RETCHMAIL_VER_STRING);
+	    wvcon->print("Retchmail version %s\n", RETCHMAIL_VER_STRING);
 	    return 2;
 	case 'F':
 	    flush = true;

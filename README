@@ -6,7 +6,7 @@ Authors: Avery Pennarun <apenwarr@nit.ca>
 -----------------------------------------------------------------------
 Retchmail is intended as a blazingly fast replacement for ESR's Fetchmail.
 For a much more in depth overview of the philosophy behind this program,
-please read apenwarr's ANNOUNCEment on for the program, which should be
+please read apenwarr's ANNOUNCEment for the program, which should be
 found in the same directory as this file.
 
 For a quick overview of the functionality, please see the retchmail(1) man
@@ -17,3 +17,7 @@ directed to the retchmail mailing list:
 
 retchmail-list@lists.nit.ca
 
+This program is Copyright 2002-2003 Net Integration Technologies Inc.
+
+This program is licensed under the LGPL, a full copy of which can be found
+in the COPYING.LIB file in the same directory as this file.
