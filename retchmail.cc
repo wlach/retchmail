@@ -734,6 +734,14 @@ int main(int argc, char **argv)
 	conffile = getenv("HOME");
 	conffile.append("/.retchmail/retchmail.conf");
 	conffile.unique();
+	if (fopen(conffile,"r") == NULL) // check and see if this exists...
+	// If not, then set conffile to $HOME/.retchmailrc
+	// Which is the recommended value anyways....
+	{
+	    conffile = getenv("HOME");
+	    conffile.append("/.retchmailrc");
+	    conffile.unique();
+	}
     }
 
     WvConf cfg(conffile, 0600);
