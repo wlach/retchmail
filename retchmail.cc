@@ -165,7 +165,7 @@ WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
 			 WvStringParm _deliverto, WvStringParm _mda, 
                          bool _flushing, bool _apop_enable,
                          bool _apop_enable_fallback )
-    : WvStreamClone(&cloned), l(_l),
+    : WvStreamClone(cloned), l(_l),
 	username(acctparse(acct)), // I hate constructors!
 	password(_password), deliverto(_deliverto), mda(_mda),
         log(WvString("PopRetriever %s", acct), WvLog::Debug3)
