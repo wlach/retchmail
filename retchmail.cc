@@ -9,7 +9,7 @@
  */
 
 #include "strutils.h"
-#include "uniconf.h"
+#include "uniconfroot.h"
 #include "wvlockfile.h"
 #include "wvver.h"
 #include "wvtcp.h"
