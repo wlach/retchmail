@@ -18,7 +18,7 @@ all: retchmail
 LDFLAGS += -rdynamic
 
 retchmail-LIBS+=$(LIBUNICONF) ${LIBWVSTREAMS} $(LIBWVUTILS)
-retchmail: retchmail.o wvpopclient.o wvsendmail.o
+retchmail: retchmail.o wvpopclient.o wvsendmail.o -luniconf
 
 install: install-bin install-man
 
