@@ -567,13 +567,21 @@ void RetchLog::_begin_line()
 	if (!lognum)
 	{
 	    lognum = new LogNum;
-	    lognum->num = ++maxnum;
+	    lognum->num = maxnum++;
 	    lognum->src = last_source;
 	    lognums.add(lognum, true);
 	}
 	
 	// identify the connectionw without being too verbose
-	write(lognum->num);
+	if (lognum->num < 26)
+	{
+	    char str[2];
+	    str[0] = 'A' + lognum->num;
+	    str[1] = 0;
+	    write(str);
+	}
+	else
+	    write(lognum->num);
 	if (last_level <= WvLog::Info)
 	    write("* ");
 	else
@@ -626,8 +634,8 @@ static WvPopClient *newpop(WvStreamList &l, const WvString &acct,
 	ssl = true;
     
     WvStream *conn = new WvTCPConn(serv);
-    if (ssl)
-	conn = new WvSSLStream(conn, NULL, false);
+    if (ssl) // FIXME: ssl verify should probably be 'true'
+	conn = new WvSSLStream(conn, NULL, false); 
     
     return new WvPopClient(conn, l, acct, pass, deliverto, flush);
 }
