@@ -1,7 +1,8 @@
+#include "strutils.h"
+#include "uniconf.h"
 #include "wvlockfile.h"
 #include "wvver.h"
 #include "wvtcp.h"
-#include "wvconf.h"
 #include "wvlog.h"
 #include "wvpipe.h"
 #include "wvstreamlist.h"
@@ -701,13 +702,13 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
 
 static void usage(char *argv0, WvStringParm deliverto)
 {
-    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c configfile ] [-t deliverto] [acct...]\n"
+    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c moniker ] [-t deliverto] [acct...]\n"
 	    "     -d   Print debug messages\n"
 	    "     -dd  Print lots of debug messages\n"
 	    "     -q   Quieter: don't print every message header\n"
 	    "     -qq  Way quieter: only print errors\n"
 	    "     -V   Print version and exit\n"
-	    "     -c   Use <configfile> instead of $HOME/.retchmail/retchmail\n"
+	    "     -c   Use <moniker> instead of ini://~/.retchmail/retchmail\n"
 	    "     -F   Flush (delete) messages after downloading\n"
 	    "     -t   Deliver mail to <deliverto> (default '%s')\n"
 	    "  acct... list of email accounts (username@host) to "
@@ -726,7 +727,7 @@ int main(int argc, char **argv)
     int c, count;
     WvLog::LogLevel lvl = WvLog::Debug1;
     WvString deliverto("");
-    WvString conffile("");
+    WvString confmoniker("");
     
     // make sure electric fence works
     free(malloc(1));
@@ -766,7 +767,7 @@ int main(int argc, char **argv)
 	    deliverto = optarg;
 	    break;
 	case 'c':
-	    conffile = optarg;
+	    confmoniker = optarg;
 	    break;
 	case 'h':
 	case '?':
@@ -800,37 +801,31 @@ int main(int argc, char **argv)
     
     RetchLog logrcv(lvl);
     
-    if (fopen(conffile,"r") == NULL) // Is conffile a valid file??
-    // If not, set it to $HOME/.retchmail/retchmail.conf
+    UniConfRoot cfg(confmoniker);
+    if (!cfg.haschildren())
     {
-	conffile = getenv("HOME");
-	conffile.append("/.retchmail/retchmail.conf");
-	if (fopen(conffile,"r") == NULL) // check and see if this exists...
-	// If not, then set conffile to $HOME/.retchmailrc
-	// Which is the recommended value anyways....
-	{
-	    conffile = getenv("HOME");
-	    conffile.append("/.retchmailrc");
-	}
+        wvcon->print("No data at %s, attempting to use $HOME/.retchmail/retchmail.conf\n");
+        confmoniker = "ini:";
+        confmoniker.append(getenv("HOME"));
+        confmoniker.append("/.retchmail/retchmail.conf");
+        cfg.mount(confmoniker);
     }
-
-    WvConf cfg(conffile, 0600);
     WvStreamList l;
     WvPopClient *cli;
-    bool apop_enable = cfg.get("retchmail", "Enable APOP", 0);
-    bool apop_enable_fallback = cfg.get("retchmail", "Enable APOP Fallback", 0);
+    bool apop_enable = cfg["retchmail"]["Enable APOP"].getint(0);
+    bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getint(0);
   
     if (optind == argc)	    
     {
-	WvConfigSection *sect = cfg["POP Servers"];
-	if (sect && !sect->isempty())
+        UniConf sect = cfg["POP Servers"];
+	if (sect.haschildren())
 	{
-	    WvConfigSection::Iter i(*sect);
+	    UniConf::Iter i(sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = newpop(l, i->name, i->value,
-			     cfg.get("POP Targets", i->name, deliverto),
-                             cfg.get("MDA Override", i->name,
+		cli = newpop(l, i->key().strip(), i->get(),
+			     cfg["POP Targets"][i->key().strip()].get(deliverto),
+                             cfg["MDA Override"][i->key().strip()].get(
 				     "/usr/sbin/sendmail"),
                              flush, apop_enable, apop_enable_fallback);
 		l.append(cli, true, "client");
@@ -847,7 +842,7 @@ int main(int argc, char **argv)
     {
 	for (count = optind; count < argc; count++)
 	{
-	    const char *pass = cfg.get("POP Servers", argv[count], NULL);
+	    WvString pass = cfg["POP Servers"][argv[count]].get();
 	    if (!pass)
 	    {
 		wvcon->print("Password for <%s>: ", argv[count]);
@@ -860,8 +855,8 @@ int main(int argc, char **argv)
 	    }
 	    
 	    cli = newpop(l, argv[count], pass,
-			 cfg.get("POP Targets", argv[count], deliverto),
-			 cfg.get("MDA Override", argv[count],
+			 cfg["POP Targets"][argv[count]].get(deliverto),
+			 cfg["MDA Override"][argv[count]].get(
 				 "/usr/sbin/sendmail"),
 			 flush, apop_enable, apop_enable_fallback);
 	    l.append(cli, true, "client");
