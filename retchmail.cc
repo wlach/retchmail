@@ -823,9 +823,9 @@ int main(int argc, char **argv)
 	    UniConf::Iter i(sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = newpop(l, i->key().strip(), i->get(),
-			     cfg["POP Targets"][i->key().strip()].get(deliverto),
-                             cfg["MDA Override"][i->key().strip()].get(
+		cli = newpop(l, i->key(), i->get(),
+			     cfg["POP Targets"][i->key()].get(deliverto),
+                             cfg["MDA Override"][i->key()].get(
 				     "/usr/sbin/sendmail"),
                              flush, apop_enable, apop_enable_fallback);
 		l.append(cli, true, "client");
