@@ -8,7 +8,7 @@ XPATH=.. ../wvstreams/include $(PKGINC)
 SSLLIB= -L/usr/lib/ssl -L/usr/lib/ssleay -L/usr/local/lib/ssleay \
 	-L/usr/local/ssl -L/usr/local/ssl/lib -L/usr/local/ssleay -lssl
 
-WVLIB= -L../wvstreams -lwvcrypto -lwvstreams -lwvutils
+WVLIB= -L../wvstreams -lwvstreams -lwvutils
 
 default: retchmail
 all: retchmail
