@@ -656,7 +656,8 @@ int main(int argc, char **argv)
 	    WvConfigSection::Iter i(*sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = new WvPopClient(l, i->name, i->value, deliverto, flush);
+		cli = new WvPopClient(l, i->name, i->value, 
+		      cfg.get("POP Targets", i->name, deliverto), flush);
 		l.append(cli, true, "client");
 	    }
 	}
@@ -684,7 +685,7 @@ int main(int argc, char **argv)
 	    }
 	    
 	    cli = new WvPopClient(l, argv[count], WvString(pass).unique(),
-				  deliverto, flush);
+			cfg.get("POP Targets", argv[count], deliverto), flush);
 	    l.append(cli, true, "client");
 	}
     }
