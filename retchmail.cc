@@ -108,14 +108,12 @@ void WvSendmailProc::done()
 
 
 
-
-
 class WvPopClient : public WvStreamClone
 {
 public:
     WvStream *cloned;
     WvStreamList &l;
-    WvString username, password, deliverto;
+    WvString username, password, deliverto, mda;
     WvLog log;
     long res1, res2;
     int  next_req, next_ack, sendmails;
@@ -139,7 +137,8 @@ public:
     // note: we take possession of 'conn' and may delete it at any time!
     WvPopClient(WvStream *conn, WvStreamList &_l,
 		WvStringParm acct, WvStringParm _password,
-		WvStringParm _deliverto, bool _flushing);
+		WvStringParm _deliverto, WvStringParm _mda, 
+		bool _flushing);
     virtual ~WvPopClient();
 
     bool never_select;
@@ -160,10 +159,11 @@ private:
 
 WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
 			 WvStringParm acct, WvStringParm _password,
-			 WvStringParm _deliverto, bool _flushing)
+			 WvStringParm _deliverto, WvStringParm _mda, 
+			 bool _flushing)
     : WvStreamClone(&cloned), l(_l),
 	username(acctparse(acct)), // I hate constructors!
-	password(_password), deliverto(_deliverto), 
+	password(_password), deliverto(_deliverto), mda(_mda),
         log(WvString("PopRetriever %s", acct), WvLog::Debug3)
 {
     uses_continue_select = true;
@@ -411,7 +411,7 @@ void WvPopClient::execute()
 	    never_select = false;
 	}
 	
-	const char *argv[] = {"/usr/sbin/sendmail", deliverto, NULL};
+	const char *argv[] = {mda, deliverto, NULL};
 	//const char *argv[] = {"dd", "of=/dev/null", NULL};
 	WvSendmailProc *p = new WvSendmailProc(argv, next_ack-1,
 	       wvcallback(WvSendmailCallback, *this, WvPopClient::send_done));
@@ -604,9 +604,10 @@ void signal_handler(int signum)
 
 static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
 			   WvStringParm _pass, WvStringParm _deliverto,
-			   bool flush)
+		 	   WvStringParm _mda, bool flush)
 {
-    WvString user(acct), serv, pass(_pass), deliverto(_deliverto);
+    WvString user(acct), serv, pass(_pass), deliverto(_deliverto),
+            mda(_mda);
     bool ssl = false;
     
     char *cptr = strchr(user.edit(), '@');
@@ -632,7 +633,7 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
     if (ssl) // FIXME: ssl verify should probably be 'true'
 	conn = new WvSSLStream(conn, NULL, false); 
     
-    return new WvPopClient(conn, l, acct, pass, deliverto, flush);
+    return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush);
 }
 
 
@@ -673,8 +674,8 @@ int main(int argc, char **argv)
     struct passwd *pw = getpwuid(getuid());
     if (pw)
 	deliverto = pw->pw_name;
-    
-    while ((c = getopt(argc, argv, "dqVFt:?c:")) >= 0)
+
+    while ((c = getopt(argc, argv, "dqVFt:c:h")) >= 0)
     {
 	switch (c)
 	{
@@ -699,7 +700,7 @@ int main(int argc, char **argv)
 	case 't':
 	    deliverto = optarg;
 	    break;
-	case '?':
+	case 'h':
 	    usage(argv[0], deliverto);
 	    break;
 	case 'c':
@@ -735,8 +736,8 @@ int main(int argc, char **argv)
     WvConf cfg(conffile, 0600);
     WvStreamList l;
     WvPopClient *cli;
-    
-    if (optind == argc)
+   
+    if (optind == argc)	    
     {
 	WvConfigSection *sect = cfg["POP Servers"];
 	if (sect && !sect->isempty())
@@ -746,6 +747,7 @@ int main(int argc, char **argv)
 	    {
 		cli = newpop(l, i->name, i->value,
 			     cfg.get("POP Targets", i->name, deliverto),
+                             cfg.get("MDA Override", i->name, "/usr/sbin/sendmail"),
 			     flush);
 		l.append(cli, true, "client");
 	    }
@@ -753,7 +755,7 @@ int main(int argc, char **argv)
 	else
 	{
 	    fprintf(stderr, "\n-- No config file and no accounts given on the "
-		    "command line!\n\n");
+		    "command line!\n");
 	    usage(argv[0], deliverto);
 	}
     }
@@ -775,6 +777,7 @@ int main(int argc, char **argv)
 	    
 	    cli = newpop(l, argv[count], pass,
 			 cfg.get("POP Targets", argv[count], deliverto),
+			 cfg.get("MDA Override", argv[count], "/usr/sbin/sendmail"),
 			 flush);
 	    l.append(cli, true, "client");
 	}
