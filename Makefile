@@ -1,18 +1,15 @@
 ifeq ($(TOPDIR),)
  TOPDIR=.
- PKGINC=/usr/include/wvstreams /usr/local/include/wvstreams
+ prefix=/usr/local
+ WVSTREAMS_INC=$(prefix)/include/wvstreams
+ WVSTREAMS_LIB=$(prefix)/lib
+ WVSTREAMS_BIN=$(prefix)/bin
+ WVSTREAMS_SRC=.
+else
+ XPATH=..
 endif
 
 include $(TOPDIR)/wvrules.mk
-
-XPATH=.. ../wvstreams/include $(PKGINC)
-
-# List of library directories for SSLeay.  Add yours to the list.
-# Don't forget the -L before each directory name!
-SSLLIB= -L/usr/lib/ssl -L/usr/lib/ssleay -L/usr/local/lib/ssleay \
-	-L/usr/local/ssl -L/usr/local/ssl/lib -L/usr/local/ssleay -lssl
-
-WVLIB= -L../wvstreams $(LIBUNICONF)
 
 default: retchmail
 all: retchmail
@@ -20,7 +17,7 @@ all: retchmail
 #LIBS += ${EFENCE}
 LDFLAGS += -rdynamic
 
-retchmail-LIBS+=${WVLIB} ${SSLLIB} 
+retchmail-LIBS+=$(LIBUNICONF) ${LIBWVSTREAMS} $(LIBWVUTILS)
 retchmail: retchmail.o wvpopclient.o wvsendmail.o
 
 install: install-bin install-man
