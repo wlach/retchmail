@@ -14,7 +14,7 @@ all:
 #LIBS = ${EFENCE}
 
 retchmail-LIBS=${SSLLIB}
-retchmail: ../crypto/crypto.a ../wvstreams/libwvstreams.a
+retchmail: ../wvstreams/libwvcrypto.a ../wvstreams/libwvstreams.a
 
 clean:
 	rm -f retchmail
