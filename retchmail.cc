@@ -744,18 +744,20 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
 
 static void usage(char *argv0, WvStringParm deliverto)
 {
-    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c moniker ] [-t deliverto] [acct...]\n"
-	    "     -d   Print debug messages\n"
-	    "     -dd  Print lots of debug messages\n"
-	    "     -q   Quieter: don't print every message header\n"
-	    "     -qq  Way quieter: only print errors\n"
-	    "     -V   Print version and exit\n"
-	    "     -c   Use <moniker> instead of ini://~/.retchmail/retchmail\n"
-	    "     -F   Flush (delete) messages after downloading\n"
-	    "     -t   Deliver mail to <deliverto> (default '%s')\n"
-	    "  acct... list of email accounts (username@host) to "
-	               "retrieve from\n",
-	    argv0, (const char *)deliverto);
+    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c moniker ] "
+		 "[-t deliverto] [acct...]\n"
+		 "     -d   Print debug messages\n"
+		 "     -dd  Print lots of debug messages\n"
+		 "     -q   Quieter: don't print every message header\n"
+		 "     -qq  Way quieter: only print errors\n"
+		 "     -V   Print version and exit\n"
+		 "     -c   Use <moniker> instead of "
+		 "ini:~/.retchmail/retchmail\n"
+		 "     -F   Flush (delete) messages after downloading\n"
+		 "     -t   Deliver mail to <deliverto> (default '%s')\n"
+		 "  acct... list of email accounts (username@host) to "
+		 "retrieve from\n",
+		 argv0, (const char *)deliverto);
     exit(1);
 }
 
@@ -846,15 +848,22 @@ int main(int argc, char **argv)
     
     RetchLog logrcv(lvl);
     
-    UniConfRoot cfg(confmoniker);
-    if (!cfg.haschildren())
+    if (!confmoniker)
     {
-        wvcon->print("No data at %s, attempting to use $HOME/.retchmail/retchmail.conf\n");
+	// attempting to use $HOME/.retchmail/retchmail.conf\n");
         confmoniker = "ini:";
         confmoniker.append(getenv("HOME"));
         confmoniker.append("/.retchmail/retchmail.conf");
-        cfg.mount(confmoniker);
     }
+
+    UniConfRoot cfg(confmoniker);
+
+    if (!cfg.haschildren())
+    {
+        wvcon->print("No data found, aborting\n");
+	exit(1);
+    }
+
     WvStreamList l;
     WvPopClient *cli;
     bool apop_enable = cfg["retchmail"]["Enable APOP"].getint(0);
