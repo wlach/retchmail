@@ -18,6 +18,7 @@ default: retchmail
 all: retchmail
 
 #LIBS = ${EFENCE}
+LDFLAGS += -rdynamic
 
 retchmail-LIBS=${WVLIB} ${SSLLIB} 
 retchmail:

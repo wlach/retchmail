@@ -745,7 +745,7 @@ int main(int argc, char **argv)
 	    break;
 	case 'V':
 	    wvcon->print("Retchmail version %s\n",RETCHMAIL_VER_STRING);
-	    exit(2);
+	    return 2;
 	case 'F':
 	    flush = true;
 	    break;
@@ -766,20 +766,22 @@ int main(int argc, char **argv)
     WvString lockname("/tmp/retchmail.%s.pid", getlogin());
     WvLockFile lockfile(lockname);
 
-    if (!lockfile.lock(getpid()))
+    if (!lockfile.lock())
     {
-        if (lockfile.getpid() == -1)
-            fprintf(stderr, "Can't access lockfile at %s.\n", lockname.cstr());
+        if (lockfile.readpid() == -1)
+            fprintf(stderr, "retchmail: can't access lockfile at %s.\n",
+		    lockname.cstr());
         else
-            fprintf(stderr, "Already running (%i).\n", lockfile.getpid());
-        exit(3);
+            fprintf(stderr, "retchmail: already running (%i).\n",
+		    lockfile.readpid());
+        return 3;
     }
 
     if (!deliverto)
     {
-	fprintf(stderr, "Can't detect username for uid#%u.  "
+	fprintf(stderr, "retchmail: can't get username for uid#%u.  "
 		"You must give the -t option.\n", getuid());
-	exit(3);
+	return 3;
     }
     
     
