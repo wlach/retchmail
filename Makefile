@@ -1,7 +1,7 @@
 TOPDIR=..
 include $(TOPDIR)/wvrules.mk
 
-XPATH=.. ../wvstreams/include
+XPATH=.. ../wvstreams/include $(PKGINC)
 
 # List of library directories for SSLeay.  Add yours to the list.
 # Don't forget the -L before each directory name!
