@@ -1,3 +1,15 @@
+retchmail (1:0.04-2) unstable; urgency=low
+
+  * Don't call callbacks when they are empty. (Closes: #232469)
+
+ -- James Morrison <phython@debian.org>  Wed,  3 Mar 2004 17:16:03 -0500
+
+retchmail (1:0.04-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- James A. Morrison <phython@debian.org>  Sun, 15 Feb 2004 13:34:48 -0500
+
 retchmail (1:0.03+20031110-1) unstable; urgency=low
 
   * Fix Build-Depends.

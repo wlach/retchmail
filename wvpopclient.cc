@@ -297,7 +297,8 @@ void WvPopClient::execute()
 	
 	if (!isok())
 	{
-	    seterr("Aborted.\n");
+	    if (!geterr()) // Keep the older, better?, error message
+	        seterr("Aborted.\n");
 	    return;
 	}
 	

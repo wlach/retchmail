@@ -37,7 +37,8 @@ bool WvSendmailProc::pre_select(SelectInfo &si)
 	exited = true;
 	
 	// call the callback
-	cb(count, !exit_status());
+	if (cb)
+	    cb(count, !exit_status());
 	
 	si.msec_timeout = 0;
 	must = true;
@@ -47,7 +48,7 @@ bool WvSendmailProc::pre_select(SelectInfo &si)
     if ((exited || is_done) && si.wants.writable)
 	must = true;
     
-    return WvPipe::pre_select(si) || must;
+    return must || WvPipe::pre_select(si);
 }
 
 
