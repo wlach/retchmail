@@ -678,9 +678,10 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
     if (atoi(cptr+1) == 995)
 	ssl = true;
     
-    WvStream *conn = new WvTCPConn(serv);
+    WvTCPConn *tcp = new WvTCPConn(serv);
+    WvStream *conn = tcp;
     if (ssl) // FIXME: ssl verify should probably be 'true'
-	conn = new WvSSLStream(conn, NULL, false); 
+	conn = new WvSSLStream(tcp, NULL, false); 
     
     return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en);
 }
