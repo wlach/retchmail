@@ -18,7 +18,7 @@
 #define MAX_REQUESTS 10
 
 
-WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
+WvPopClient::WvPopClient(WvStream *conn, WvIStreamList &_l,
 			 WvStringParm acct, WvStringParm _password,
 			 WvStringParm _deliverto, WvStringParm _mda, 
                          bool _flushing, bool _apop_enable,

@@ -16,7 +16,7 @@
 #include "wvtcp.h"
 #include "wvlog.h"
 #include "wvpipe.h"
-#include "wvstreamlist.h"
+#include "wvistreamlist.h"
 #include "wvlogrcv.h"
 #include "wvsslstream.h"
 #include "wvhashtable.h"
@@ -106,7 +106,7 @@ void signal_handler(int signum)
 }
 
 
-static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
+static WvPopClient *newpop(WvIStreamList &l, WvStringParm acct,
 			   WvStringParm _pass, WvStringParm _deliverto,
                            WvStringParm _mda, bool flush, bool apop_en,
                            bool apop_fall_en, bool explode)
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    WvStreamList l;
+    WvIStreamList l;
     WvPopClient *cli;
     bool apop_enable = cfg["retchmail"]["Enable APOP"].getmeint(0);
     bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getmeint(0);

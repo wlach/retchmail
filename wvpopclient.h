@@ -11,7 +11,7 @@
 #include "wvsendmail.h"
 #include "wvstreamclone.h"
 #include "wvstring.h"
-#include "wvstreamlist.h"
+#include "wvistreamlist.h"
 #include "wvhashtable.h"
 #include "wvlog.h"
 
@@ -24,7 +24,7 @@ class WvPopClient : public WvStreamClone
 {
 public:
     WvStream *cloned;
-    WvStreamList &l;
+    WvIStreamList &l;
     WvSendmailProcDict sendprocs;
     WvString username, password, deliverto, mda;
     WvLog log;
@@ -48,7 +48,7 @@ public:
     
     
     // note: we take possession of 'conn' and may delete it at any time!
-    WvPopClient(WvStream *conn, WvStreamList &_l,
+    WvPopClient(WvStream *conn, WvIStreamList &_l,
 		WvStringParm acct, WvStringParm _password,
 		WvStringParm _deliverto, WvStringParm _mda, 
 		bool _flushing, bool _apop_enable,
