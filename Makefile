@@ -11,7 +11,7 @@ SSLLIB= -L/usr/lib/ssl -L/usr/lib/ssleay -L/usr/local/lib/ssleay \
 WVLIB= -L../wvstreams -lwvutils -lwvstreams -lwvcrypto
 
 default: retchmail
-all: 
+all: retchmail
 
 #LIBS = ${EFENCE}
 
