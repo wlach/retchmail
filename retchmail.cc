@@ -138,15 +138,15 @@ public:
     
     // note: we take possession of 'conn' and may delete it at any time!
     WvPopClient(WvStream *conn, WvStreamList &_l,
-		const WvString &acct, const WvString &_password,
-		const WvString &_deliverto, bool _flushing);
+		WvStringParm acct, WvStringParm _password,
+		WvStringParm _deliverto, bool _flushing);
     virtual ~WvPopClient();
 
     bool never_select;
     virtual bool pre_select(SelectInfo &si);
     virtual void execute();
     
-    void cmd(const WvString &s);
+    void cmd(WvStringParm s);
     void cmd(WVSTRING_FORMAT_DECL)
 	{ return cmd(WvString(WVSTRING_FORMAT_CALL)); }
     bool response();
@@ -154,13 +154,13 @@ public:
     void send_done(int count, bool success);
     
 private:
-    WvString acctparse(const WvString &acct);
+    WvString acctparse(WvStringParm acct);
 };
 
 
 WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
-			 const WvString &acct, const WvString &_password,
-			 const WvString &_deliverto, bool _flushing)
+			 WvStringParm acct, WvStringParm _password,
+			 WvStringParm _deliverto, bool _flushing)
     : WvStreamClone(&cloned), l(_l),
 	username(acctparse(acct)), // I hate constructors!
 	password(_password), deliverto(_deliverto), 
@@ -192,7 +192,7 @@ WvPopClient::~WvPopClient()
 }
 
 
-WvString WvPopClient::acctparse(const WvString &acct)
+WvString WvPopClient::acctparse(WvStringParm acct)
 {
     WvString u(acct);
     char *cptr = strrchr(u.edit(), '@');
@@ -203,7 +203,7 @@ WvString WvPopClient::acctparse(const WvString &acct)
 }
 
 
-void WvPopClient::cmd(const WvString &s)
+void WvPopClient::cmd(WvStringParm s)
 {
     print("%s\r\n", s);
     
@@ -603,8 +603,8 @@ void signal_handler(int signum)
 }
 
 
-static WvPopClient *newpop(WvStreamList &l, const WvString &acct,
-			   const WvString &_pass, const WvString &_deliverto,
+static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
+			   WvStringParm _pass, WvStringParm _deliverto,
 			   bool flush)
 {
     WvString user(acct), serv, pass(_pass), deliverto(_deliverto);
@@ -641,7 +641,7 @@ static WvPopClient *newpop(WvStreamList &l, const WvString &acct,
 }
 
 
-static void usage(char *argv0, const WvString &deliverto)
+static void usage(char *argv0, WvStringParm deliverto)
 {
     fprintf(stderr,
 	    "Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c configfile ] [-t deliverto] [acct...]\n"
