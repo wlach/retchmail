@@ -29,7 +29,7 @@ public:
     WvSendmailProc(const char **argv, int _c, const WvSendmailCallback &_cb);
     virtual ~WvSendmailProc();
     
-    virtual bool select_setup(SelectInfo &si);
+    virtual bool pre_select(SelectInfo &si);
     virtual bool isok() const;
     virtual void execute();
     void done();
@@ -61,7 +61,7 @@ WvSendmailProc::~WvSendmailProc()
 }
 
 
-bool WvSendmailProc::select_setup(SelectInfo &si)
+bool WvSendmailProc::pre_select(SelectInfo &si)
 {
     bool must = false;
 
@@ -79,7 +79,7 @@ bool WvSendmailProc::select_setup(SelectInfo &si)
 	si.msec_timeout = 0;
 	must = true;
     }
-    return WvPipe::select_setup(si) || must;
+    return WvPipe::pre_select(si) || must;
 }
 
 
@@ -101,7 +101,7 @@ void WvSendmailProc::execute()
 void WvSendmailProc::done()
 {
     is_done = true;
-    force_select(false, true, false);
+    force_select(false, true);
 }
 
 
@@ -143,7 +143,7 @@ public:
     virtual ~WvPopClient();
 
     bool never_select;
-    virtual bool select_setup(SelectInfo &si);
+    virtual bool pre_select(SelectInfo &si);
     virtual void execute();
     
     void cmd(const WvString &s);
@@ -262,14 +262,14 @@ static int messcompare(const void *_a, const void *_b)
 }
 
 
-bool WvPopClient::select_setup(SelectInfo &si)
+bool WvPopClient::pre_select(SelectInfo &si)
 {
-    bool val, oldrd = si.readable;
+    bool val, oldrd = si.wants.readable;
 
     if (never_select)
-	si.readable = false;
-    val = WvStreamClone::select_setup(si);
-    si.readable = oldrd;
+	si.wants.readable = false;
+    val = WvStreamClone::pre_select(si);
+    si.wants.readable = oldrd;
     return val;
 }
 
