@@ -327,7 +327,7 @@ void WvPopClient::execute()
 
         /* copy timestamp and password into digestion buffer */
         WvString digestsecret("%s%s",start,password);
-        WvDynamicBuffer md5buf;
+        WvDynBuf md5buf;
         WvMD5Digest().flushstrbuf(digestsecret, md5buf, true /*finish*/);
         WvString md5hex = WvHexEncoder().strflushbuf(md5buf, true);
 
