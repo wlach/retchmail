@@ -327,8 +327,8 @@ void WvPopClient::execute()
         /* copy timestamp and password into digestion buffer */
         WvString digestsecret("%s%s",start,password);
         WvDynamicBuffer md5buf;
-        WvMD5Digest().flush(digestsecret, md5buf, true /*finish*/);
-        WvString md5hex = WvHexEncoder().strflush(md5buf, true);
+        WvMD5Digest().flushstrbuf(digestsecret, md5buf, true /*finish*/);
+        WvString md5hex = WvHexEncoder().strflushbuf(md5buf, true);
 
         log(WvLog::Debug2, "Using APOP response: %s\n", md5hex);
         cmd("apop %s %s", username, md5hex);
