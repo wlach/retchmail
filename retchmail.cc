@@ -169,7 +169,7 @@ WvPopClient::WvPopClient(WvStreamList &_l, const WvString &acct,
     flushing = _flushing;
     next_req = next_ack = sendmails = 0;
     
-    log(WvLog::Info, "Deliver mail from %s@%s into %s.\n",
+    log(WvLog::Info, "Retrieve mail from %s@%s into %s.\n",
 	username, server, deliverto);
 }
 
