@@ -7,9 +7,10 @@
 #include "wvstreamlist.h"
 #include "wvlogrcv.h"
 #include "wvsslstream.h"
-#include "wvcrypto.h"
 #include "wvhashtable.h"
 #include "wvcrash.h"
+#include "wvdigest.h"
+#include "wvhex.h"
 #include <signal.h>
 #include <assert.h>
 #include <pwd.h>
@@ -325,10 +326,12 @@ void WvPopClient::execute()
 
         /* copy timestamp and password into digestion buffer */
         WvString digestsecret("%s%s",start,password);
+        WvBuffer md5buf;
+        WvMD5Digest().flush(digestsecret, md5buf, true /*finish*/);
+        WvString md5hex = WvHexEncoder().strflush(md5buf, true);
 
-        WvMD5 resp(digestsecret,false);
-        log(WvLog::Debug2, "Using APOP response: %s\n", (resp.md5_hash()));
-        cmd("apop %s %s",username,(resp.md5_hash()));
+        log(WvLog::Debug2, "Using APOP response: %s\n", md5hex);
+        cmd("apop %s %s", username, md5hex);
     } 
 
     if ((!apop_enable) || (!strrchr(greeting,'>')) || ((!response())&&apop_enable_fallback)) {
