@@ -1,4 +1,4 @@
-
+#include "wvver.h"
 #include "wvtcp.h"
 #include "wvconf.h"
 #include "wvlog.h"
@@ -699,7 +699,7 @@ int main(int argc, char **argv)
 		lvl = WvLog::Notice;
 	    break;
 	case 'V':
-	    fprintf(stderr, "Retchmail version 0.0\n");
+	    wvcon->print("Retchmail version %s\n",RETCHMAIL_VER_STRING);
 	    exit(2);
 	case 'F':
 	    flush = true;
