@@ -334,7 +334,9 @@ void WvPopClient::execute()
         cmd("apop %s %s", username, md5hex);
     } 
 
-    if ((!apop_enable) || (!strrchr(greeting,'>')) || ((!response())&&apop_enable_fallback)) {
+    if (!apop_enable || !strrchr(greeting,'>') 
+	|| (!response() && apop_enable_fallback))
+    {
         // USER/PASS login
         cmd("user %s", username);
         cmd("pass %s", password);
@@ -486,8 +488,18 @@ void WvPopClient::execute()
 	    
 	    if (line[0]==0 || line[0]=='\r')
 		in_head = false;
-	    if (line[0]=='.' && (!strcmp(line, ".") || !strcmp(line, ".\r")))
-		break; // done
+	    if (line[0]=='.')
+	    {
+		if (!strcmp(line, ".") || !strcmp(line, ".\r"))
+		    break; // dot on a line by itself: done this message.
+		else
+		{
+		    // POP servers turn any line *starting with* a dot into
+		    // a line starting with dot-dot; so remove the extra
+		    // dot.
+		    line++;
+		}
+	    }
 	    
 	    if (in_head && !strncasecmp(line, "From: ", 6))
 	    {
