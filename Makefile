@@ -1,4 +1,4 @@
-TOPDIR=../..
+TOPDIR=..
 include $(TOPDIR)/wvrules.mk
 
 XPATH=.. ../wvstreams/include
@@ -8,13 +8,15 @@ XPATH=.. ../wvstreams/include
 SSLLIB= -L/usr/lib/ssl -L/usr/lib/ssleay -L/usr/local/lib/ssleay \
 	-L/usr/local/ssl -L/usr/local/ssl/lib -L/usr/local/ssleay -lssl
 
+WVLIB= -L../wvstreams -lwvutils -lwvstreams -lwvcrypto
+
 default: retchmail
 all: 
 
 #LIBS = ${EFENCE}
 
-retchmail-LIBS=${SSLLIB}
-retchmail: ../wvstreams/libwvcrypto.a ../wvstreams/libwvstreams.a
+retchmail-LIBS=${SSLLIB} ${WVLIB}
+retchmail:
 
 clean:
 	rm -f retchmail
