@@ -9,6 +9,7 @@
 #include "wvsslstream.h"
 #include "wvcrypto.h"
 #include "wvhashtable.h"
+#include "wvcrash.h"
 #include <signal.h>
 #include <assert.h>
 #include <pwd.h>
@@ -684,8 +685,7 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
 
 static void usage(char *argv0, WvStringParm deliverto)
 {
-    fprintf(stderr,
-	    "Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c configfile ] [-t deliverto] [acct...]\n"
+    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c configfile ] [-t deliverto] [acct...]\n"
 	    "     -d   Print debug messages\n"
 	    "     -dd  Print lots of debug messages\n"
 	    "     -q   Quieter: don't print every message header\n"
@@ -714,6 +714,10 @@ int main(int argc, char **argv)
     
     // make sure electric fence works
     free(malloc(1));
+
+    // Initialize wvcrash
+    wvcrash_setup(argv[0]);
+
     signal(SIGPIPE, SIG_IGN);
     
     struct passwd *pw = getpwuid(getuid());
