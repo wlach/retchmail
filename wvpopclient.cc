@@ -60,7 +60,7 @@ WvPopClient::~WvPopClient()
 	log(WvLog::Info, "Done.\n");
     
     if (mess)
-	delete[] mess;
+	deletev mess;
 }
 
 
