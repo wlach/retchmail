@@ -452,7 +452,6 @@ void WvPopClient::execute()
 		    if (cptr)
 			*cptr = 0;
 		    from = WvString("<%s", tmp);
-		    from.unique();
 		}
 		else
 		    from = line+6;
@@ -610,15 +609,11 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
     WvString user(acct), serv, pass(_pass), deliverto(_deliverto);
     bool ssl = false;
     
-    pass.unique();
-    deliverto.unique();
-    
     char *cptr = strchr(user.edit(), '@');
     if (cptr)
     {
 	*cptr++ = 0;
 	serv = cptr;
-	serv.unique();
     }
     else
 	serv = "localhost";
@@ -677,10 +672,7 @@ int main(int argc, char **argv)
     
     struct passwd *pw = getpwuid(getuid());
     if (pw)
-    {
 	deliverto = pw->pw_name;
-	deliverto.unique();
-    }
     
     while ((c = getopt(argc, argv, "dqVFt:?c:")) >= 0)
     {
@@ -706,14 +698,12 @@ int main(int argc, char **argv)
 	    break;
 	case 't':
 	    deliverto = optarg;
-	    deliverto.unique();
 	    break;
 	case '?':
 	    usage(argv[0], deliverto);
 	    break;
 	case 'c':
 	    conffile = optarg;
-	    conffile.unique();
 	    break;
 	}
     }
@@ -733,14 +723,12 @@ int main(int argc, char **argv)
     {
 	conffile = getenv("HOME");
 	conffile.append("/.retchmail/retchmail.conf");
-	conffile.unique();
 	if (fopen(conffile,"r") == NULL) // check and see if this exists...
 	// If not, then set conffile to $HOME/.retchmailrc
 	// Which is the recommended value anyways....
 	{
 	    conffile = getenv("HOME");
 	    conffile.append("/.retchmailrc");
-	    conffile.unique();
 	}
     }
 
