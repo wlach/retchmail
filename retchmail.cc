@@ -46,7 +46,9 @@ public:
     
     virtual bool pre_select(SelectInfo &si);
     virtual bool isok() const;
+    virtual size_t uwrite(const void *buf, size_t count);
     virtual void execute();
+    
     void done();
 };
 
@@ -69,7 +71,7 @@ WvSendmailProc::~WvSendmailProc()
     int ret = finish();
 
     // be certain the callback gets called
-    if (!exited)
+    if (!exited && cb)
 	cb(count, (ret == 0));
     
     num_sendmails--;
@@ -83,24 +85,38 @@ bool WvSendmailProc::pre_select(SelectInfo &si)
     if (is_done && !exited && si.msec_timeout > 20)
 	si.msec_timeout = 20;
     
-    if (child_exited() && !exited)
+    if (child_exited() && !exited && is_done)
     {
 	exited = true;
 	
 	// call the callback
-	if (is_done)
-	    cb(count, !exit_status());
+	cb(count, !exit_status());
 	
 	si.msec_timeout = 0;
 	must = true;
     }
+    
+    // another hack because isok() returns true when it shouldn't really
+    if ((exited || is_done) && si.wants.writable)
+	must = true;
+    
     return WvPipe::pre_select(si) || must;
 }
 
 
 bool WvSendmailProc::isok() const
 {
+    // note: this means people will try to write to us even if the pipe
+    // says it's invalid!
     return WvPipe::isok() || !exited;
+}
+
+
+size_t WvSendmailProc::uwrite(const void *buf, size_t count)
+{
+    if (child_exited())
+	return count; // fake it, because isok() is also faking it
+    return WvPipe::uwrite(buf, count);
 }
 
 
@@ -121,12 +137,13 @@ void WvSendmailProc::done()
 
 
 
-
+DeclareWvDict(WvSendmailProc, int, count);
 
 class WvPopClient : public WvStreamClone
 {
 public:
     WvStreamList &l;
+    WvSendmailProcDict sendprocs;
     WvString username, password, deliverto, mda;
     WvLog log;
     long res1, res2;
@@ -176,14 +193,14 @@ WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
 			 WvStringParm acct, WvStringParm _password,
 			 WvStringParm _deliverto, WvStringParm _mda, 
                          bool _flushing, bool _apop_enable,
-                         bool _apop_enable_fallback )
-    : WvStreamClone(conn), l(_l),
+                         bool _apop_enable_fallback)
+    : WvStreamClone(conn), l(_l), sendprocs(10),
 	username(acctparse(acct)), // I hate constructors!
 	password(_password), deliverto(_deliverto), mda(_mda),
         log(WvString("PopRetriever %s", acct), WvLog::Debug3)
 {
     uses_continue_select = true;
-    personal_stack_size = 8192;
+    personal_stack_size = 65536;
     mess = NULL;
     never_select = false;
     flushing = _flushing;
@@ -197,7 +214,15 @@ WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
 
 WvPopClient::~WvPopClient()
 {
+    if (isok()) // someone is killing us before our time
+	seterr("Closed connection at user request.");
+    
     terminate_continue_select();
+
+    // disable callbacks for all remaining sendmail procs
+    WvSendmailProcDict::Iter i(sendprocs);
+    for (i.rewind(); i.next(); )
+	i->cb = NULL;
     
     if (geterr())
 	log(WvLog::Error, "Aborted.  Error was: %s\n", errstr());
@@ -312,12 +337,12 @@ void WvPopClient::execute()
     // Adapted for APOP by markj@luminas.co.uk
     // trace.append(new WvString("HELLO"), true);
     greeting = getline(60*1000);
-    if ((!greeting) || (strncmp(greeting,"+OK",3))) goto fail;
+    if (!greeting || strncmp(greeting,"+OK", 3)) goto fail;
     // if (!response()) goto fail;
     log(WvLog::Debug1, "Recv(HELLO): %s", greeting);
 
     // log in
-    if (apop_enable && (strrchr(greeting,'>'))) 
+    if (apop_enable && strrchr(greeting, '>')) 
     {
         // APOP login attempt -- early code from fetchmail
         /* build MD5 digest from greeting timestamp + password */
@@ -333,6 +358,7 @@ void WvPopClient::execute()
         else
             *++end = '\0';
         // end of fetchmail code
+	// 
         log(WvLog::Debug2, "Using APOP seed: %s\n", start);
 
         /* copy timestamp and password into digestion buffer */
@@ -345,7 +371,7 @@ void WvPopClient::execute()
         cmd("apop %s %s", username, md5hex);
     } 
 
-    if (!apop_enable || !strrchr(greeting,'>') 
+    if (!apop_enable || !strrchr(greeting, '>') 
 	|| (!response() && apop_enable_fallback))
     {
         // USER/PASS login
@@ -394,8 +420,9 @@ void WvPopClient::execute()
 	   || (next_ack && mess[next_ack-1].deletes_after_this) || sendmails)
     {
 	if (!isok()) break;
-	log(WvLog::Debug4, "next_ack=%s dels=%s mails=%s/%s\n",
-	    next_ack, mess[0].deletes_after_this, sendmails,
+	log(WvLog::Debug4, "next_ack=%s/%s dels=%s sendmails=%s/%s\n",
+	    next_ack, nmsgs,
+	    mess[0].deletes_after_this, sendmails,
 	    WvSendmailProc::num_sendmails);
 	
 	while (next_req < nmsgs && next_req-next_ack < MAX_REQUESTS)
@@ -551,6 +578,7 @@ void WvPopClient::execute()
 	
 	p->done();
 	l.append(p, true, "sendmail");
+	sendprocs.add(p, false);
     }
     
     cmd("quit");
@@ -568,7 +596,11 @@ fail:
 void WvPopClient::send_done(int count, bool success)
 {
     assert(mess);
-    log(WvLog::Debug4, "send_done %s\n", count+1);
+    log(WvLog::Debug4, "send_done %s (success=%s)\n", count+1, success);
+    
+    WvSendmailProc *proc = sendprocs[count];
+    if (proc)
+	sendprocs.remove(proc);
     
     sendmails--;
 
@@ -738,6 +770,9 @@ int main(int argc, char **argv)
     WvLog::LogLevel lvl = WvLog::Debug1;
     WvString deliverto("");
     WvString confmoniker("");
+    
+    // Set up WvCrash
+    wvcrash_setup(argv[0]);
     
     // make sure electric fence works
     free(malloc(1));
