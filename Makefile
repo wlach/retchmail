@@ -17,7 +17,7 @@ WVLIB= -L../wvstreams $(LIBUNICONF)
 default: retchmail
 all: retchmail
 
-LIBS = ${EFENCE}
+#LIBS += ${EFENCE}
 LDFLAGS += -rdynamic
 
 retchmail-LIBS+=${WVLIB} ${SSLLIB} 
