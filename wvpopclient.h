@@ -22,6 +22,7 @@ DeclareWvDict(WvSendmailProc, int, count);
 class WvPopClient : public WvStreamClone
 {
 public:
+    WvStream *cloned;
     WvSendmailProcDict sendprocs;
     WvString username, password, deliverto, mda;
     WvLog log;
