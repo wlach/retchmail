@@ -21,7 +21,7 @@ LIBS = ${EFENCE}
 LDFLAGS += -rdynamic
 
 retchmail-LIBS+=${WVLIB} ${SSLLIB} 
-retchmail:
+retchmail: retchmail.o wvpopclient.o wvsendmail.o
 
 install: install-bin install-man
 

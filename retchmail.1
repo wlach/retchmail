@@ -6,7 +6,7 @@ retchmail \- The world's most stupidly fast POP3 retriever.
 
 .SH SYNOPSIS
 .B retchmail
-.I "-d | -dd | -q | -qq | -c | -V | -F | -t deliverto | fromacct..."
+.I "\-d | \-dd | \-q | \-qq | \-c | \-V | \-E | \-F | \-t deliverto | fromacct..."
 
 .SH DESCRIPTION
 .B retchmail
@@ -37,6 +37,10 @@ Run in REALLY quiet mode (only print error messages)
 Run retchmail with configfile as the configuration file (instead of
 $HOME/.retchmailrc). 
 .TP
+.I "\-E"
+Explode a multidrop mailbox and deliver mail to the users that X-Envelope-To
+says to.
+.TP
 .I "\-F"
 Flush all messages after downloading - you probably want to make sure this
 is on the command line, or else you will keep downloading the same messages
@@ -63,7 +67,7 @@ Probably very few, but if you find any, please report them to
 Also, there is now a mailing list for discussion about
 .BR retchmail .
 If you are having problems, or have anything else to say, send e-mail to
-.BR <retchmail-list@lists.nit.ca> .
+.BR <retchmail\-list@lists.nit.ca> .
 .PP
 .SH FILES
 .TP
