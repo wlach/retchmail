@@ -13,7 +13,6 @@
 #include "wvstring.h"
 #include "wvistreamlist.h"
 #include "wvhashtable.h"
-#include "wvcont.h"
 #include "wvlog.h"
 
 #ifndef WVPOPCLIENT_H
@@ -69,9 +68,6 @@ public:
     
 private:
     WvString acctparse(WvStringParm acct);
-
-    WvCont cont;
-    void *real_execute(void *contdata = 0);
 };
 
 #endif // WVPOPCLIENT_H

@@ -26,9 +26,10 @@ WvPopClient::WvPopClient(WvStream *conn, WvIStreamList &_l,
   : WvStreamClone(conn), l(_l), sendprocs(10),
     username(acctparse(acct)), // I hate constructors!
     password(_password), deliverto(_deliverto), mda(_mda),
-    log(WvString("PopRetriever %s", acct), WvLog::Debug3),
-    cont(WvContCallback(this, &WvPopClient::real_execute))
+    log(WvString("PopRetriever %s", acct), WvLog::Debug3)
 {
+    uses_continue_select = true;
+    personal_stack_size = 65536;
     mess = NULL;
     never_select = false;
     flushing = _flushing;
@@ -46,6 +47,8 @@ WvPopClient::~WvPopClient()
     if (isok()) // someone is killing us before our time
 	seterr("Closed connection at user request.");
     
+    terminate_continue_select();
+
     // disable callbacks for all remaining sendmail procs
     WvSendmailProcDict::Iter i(sendprocs);
     for (i.rewind(); i.next(); )
@@ -150,7 +153,7 @@ bool WvPopClient::pre_select(SelectInfo &si)
 }
 
 
-void *WvPopClient::real_execute(void *contdata)
+void WvPopClient::execute()
 {
     const char format[] = "%20.20s> %-40.40s\n";
     char *line, *greeting, *start, *end, *cptr;
@@ -208,7 +211,7 @@ void *WvPopClient::real_execute(void *contdata)
         if (!response())
         {
            seterr("Server denied access.  Wrong password?");
-           return 0;
+           return;
         }
     }
 
@@ -296,7 +299,7 @@ void *WvPopClient::real_execute(void *contdata)
 	{
 	    if (!geterr()) // Keep the older, better?, error message
 	        seterr("Aborted.\n");
-	    return 0;
+	    return;
 	}
 	
 	next_ack++;
@@ -343,14 +346,14 @@ void *WvPopClient::real_execute(void *contdata)
 		if (p)
 		  p->kill(SIGTERM);
 		seterr("Connection dropped while reading message contents!");
-		return 0;
+		return;
 	    }
 	    if (!line)
 	    {
 	      if (p)
 		p->kill(SIGTERM);
 		seterr(ETIMEDOUT);
-		return 0;
+		return;
 	    }
 	    
 	    // remove \r character, if the server gave one
@@ -437,7 +440,7 @@ void *WvPopClient::real_execute(void *contdata)
     if (!response()) goto fail;
     
     close();
-    return 0;
+    return;
     
 fail:
     if (cloned && cloned->geterr())
@@ -447,13 +450,7 @@ fail:
 	       cloned ? inbuf.used() : 0);
     else
 	seterr("Server said something unexpected!");
-    return 0;
-}
-
-
-void WvPopClient::execute()
-{
-    cont();
+    return;
 }
 
 
