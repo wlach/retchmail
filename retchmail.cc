@@ -195,7 +195,7 @@ WvPopClient::~WvPopClient()
 WvString WvPopClient::acctparse(const WvString &acct)
 {
     WvString u(acct);
-    char *cptr = strchr(u.edit(), '@');
+    char *cptr = strrchr(u.edit(), '@');
     
     if (cptr)
 	*cptr = 0;
