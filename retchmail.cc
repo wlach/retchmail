@@ -272,8 +272,8 @@ int main(int argc, char **argv)
 
     WvStreamList l;
     WvPopClient *cli;
-    bool apop_enable = cfg["retchmail"]["Enable APOP"].getint(0);
-    bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getint(0);
+    bool apop_enable = cfg["retchmail"]["Enable APOP"].getmeint(0);
+    bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getmeint(0);
   
     if (optind == argc)	    
     {
@@ -283,12 +283,12 @@ int main(int argc, char **argv)
 	    UniConf::Iter i(sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = newpop(l, i->key(), i->get(),
-			     cfg["POP Targets"][i->key()].get(deliverto),
-                             cfg["MDA Override"][i->key()].get(
+		cli = newpop(l, i->key(), i->getme(),
+			     cfg["POP Targets"][i->key()].getme(deliverto),
+                             cfg["MDA Override"][i->key()].getme(
 				     "/usr/sbin/sendmail"),
                              flush, apop_enable, apop_enable_fallback,
-			     explode ? : cfg["Explode"][i->key()].getint(0));
+			     explode ? : cfg["Explode"][i->key()].getmeint(0));
 		l.append(cli, true, "client");
 	    }
 	}
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
     {
 	for (count = optind; count < argc; count++)
 	{
-	    WvString pass = cfg["POP Servers"][argv[count]].get();
+	    WvString pass = cfg["POP Servers"][argv[count]].getme();
 	    if (!pass)
 	    {
 		wvcon->print("Password for <%s>: ", argv[count]);
@@ -316,8 +316,8 @@ int main(int argc, char **argv)
 	    }
 	    
 	    cli = newpop(l, argv[count], pass,
-			 cfg["POP Targets"][argv[count]].get(deliverto),
-			 cfg["MDA Override"][argv[count]].get(
+			 cfg["POP Targets"][argv[count]].getme(deliverto),
+			 cfg["MDA Override"][argv[count]].getme(
 				 "/usr/sbin/sendmail"),
 			 flush, apop_enable, apop_enable_fallback, explode);
 	    l.append(cli, true, "client");
