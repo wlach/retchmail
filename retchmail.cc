@@ -12,7 +12,7 @@
 #include <pwd.h>
 #include <sys/types.h>
 
-#define MAX_PROCESSES 1
+#define MAX_PROCESSES 5
 #define MAX_REQUESTS 10
 
 // parameters are: int mess_index, bool success
@@ -675,7 +675,7 @@ int main(int argc, char **argv)
     if (pw)
 	deliverto = pw->pw_name;
 
-    while ((c = getopt(argc, argv, "dqVFt:c:h")) >= 0)
+    while ((c = getopt(argc, argv, "dqVFt:c:h?")) >= 0)
     {
 	switch (c)
 	{
@@ -700,11 +700,13 @@ int main(int argc, char **argv)
 	case 't':
 	    deliverto = optarg;
 	    break;
-	case 'h':
-	    usage(argv[0], deliverto);
-	    break;
 	case 'c':
 	    conffile = optarg;
+	    break;
+	case 'h':
+	case '?':
+	default:
+	    usage(argv[0], deliverto);
 	    break;
 	}
     }
