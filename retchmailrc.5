@@ -1,0 +1,66 @@
+.TH RETCHMAILRC 5 "January 2002" "NIT.CA" "Retchmail"
+.SH NAME
+retchmailrc \- retchmail configuration file
+.SH DESCRIPTION
+When
+.B retchmail
+starts, it first loads its configuration from
+.IR $HOME/.retchmailrc ,
+which contains basic information about all of the various accounts and
+servers that you want to download your mail from, and deliver your mail to.
+.sp
+The configuration file
+.I $HOME/.retchmailrc
+is in Windows "ini" file format, with
+.B sections
+named in square brackets and a number of
+.B variable = value
+pairs within each section.
+.sp
+Here is a sample configuration file:
+.PP
+[POP Servers]
+.br
+testuser@example.com = password
+.br
+[POP Targets]
+.br
+testuser@example.com = localuser
+.PP
+The sample configuration file above contains all of the options
+necessary to run retchmail to automatically deliver mail from
+.B testuser@example.com
+to
+.B localuser.
+when retchmail is invoked.
+.PP
+If you want retchmail to use SSL to encrypt all of the traffic between it
+and your POP server, then it's as easy as adding :995 to the POP Servers
+account name as follows:
+.PP
+[POP Servers]
+.br
+testuser@example.com:995 = password
+.br
+[POP Targets]
+.br
+testuser@example.com:995 = localuser
+.PP 
+If you wish to have retchmail use a mail delivery agent (MDA) other then
+sendmail to deliver your mail you may also add a MDA Override option to your
+config file as follows:
+.PP
+[POP Servers]
+.br
+testuser@example.com = password
+.br
+[MDA Override]
+.br
+testuser@example.com = qmail
+.PP
+.SH SEE ALSO
+.BR retchmail (1),
+.PP
+.SH AUTHORS
+Avery Pennarun and Patrick Patterson for Net Integration Technologies Inc., as
+part of the NetIntegrator project.

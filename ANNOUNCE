@@ -1,0 +1,196 @@
+1. What is retchmail?
+
+Eric Raymond's Fetchmail is a full-featured, robust, well-documented
+remote-mail retrieval and forwarding utility intended to be used over
+on-demand TCP/IP links (such as SLIP or PPP connections). It supports every
+remote-mail protocol now in use on the Internet: POP2, POP3, RPOP, APOP,
+KPOP, all flavors of IMAP, ETRN, and ODMR. It can even support IPv6 and
+IPSEC.
+
+Oh, you were asking about RETCHMAIL. Sorry.
+
+Retchmail is the world's most stupidly fast POP3 retriever.
+
+It is almost completely unlike fetchmail: retchmail lacks features, isn't
+particularly robust (although it won't delete a message until sendmail says
+it was delivered okay), has nearly no documentation, and is actually fast.
+
+Thanks to Patrick Patterson's WvSSLStream, retchmail also supports
+POP3-SSL, which is much more secure than the RPOP, APOP, KPOP and other
+password obfuscation routines currently en vogue to hide your password. SSL
+has the nice feature that not only is your password secure going across the
+wire, but so is the rest of your mail.
+
+
+2. Where can I get it?
+
+http://open.nit.ca/retchmail/
+
+
+3. What exactly do you mean by "stupidly" fast?
+
+Well, retchmail was written because I was annoyed with waiting for my e-mail
+to download. I have a pretty active email box (several, actually), and I
+often have to retrieve my mail through a rather high-latency Internet
+connection from whatever odd places I might be in at the time. Traditional
+POP retriever programs were slowly driving me crazier.
+
+Here are some reasons that retchmail seems to be and actually is faster than
+any other mail retriever I know:
+
+- Retchmail downloads from multiple mailboxes simultaneously; if you have
+  several email accounts, like I do, you don't have to wait for one
+  download to finish before starting the next one. If you want, you can
+  deliver mail from each mailbox into a different local mailbox. If one
+  of your mail servers is slower than the others, it can download in the
+  background while your faster servers go faster.
+
+- Retchmail can be waiting for one message delivery to finish while it
+  starts the next one. Since mail delivery programs tend to be
+  ultra-paranoid and fsync() and run the disks a lot, you'd be surprised at
+  how much faster this can make things, without making them less safe.
+
+- Retchmail downloads smaller messages before larger ones, without
+  disturbing the message order too much.  This means you can start reading
+  your small messages before the giant attachment has finished downloading.
+  However, retchmail only reorders messages when it's actually useful, so
+  your mailbox stays in mainly chronological order.
+
+- Special bonus feature: absolutely nowhere in retchmail's code is there an
+  arbitrary 3-second sleep(). Wow! What other mail retriever can say
+  that? (Hint: not fetchmail.)
+
+
+4. That sounds fast, but not "stupidly" fast. Are you forgetting to tell me 
+   something?
+
+You caught me. The main reason retchmail is faster - often more than 5x
+faster than fetchmail - is that it pipelines message retrievals. That means
+it asks for several messages from the server at once, rather than requesting
+a message, waiting for it to download, deleting it, waiting for the delete
+request to be acknowledged, and requesting the next one. For a mailbox with
+lots of short messages (the common case) the request-wait-request-wait style
+of transaction is _hideously_ slow, because no messages are being sent (the
+link is idle) in between the previous message being sent and the next
+request being received.
+
+If you do the math, you'll find that for the common case of a relatively
+slow or overloaded Internet connection with relatively small messages,
+_most_ of the time it takes to download your mailbox is actually spent
+just waiting while no data is transferred.
+
+Instead, retchmail requests multiple messages at once, so it always has
+several messages "in flight" at once. For example, it requests messages 1
+through 5, and the server starts sending those in order. When retchmail has
+finished receiving message #1, it then requests message #6, and so on. The
+mail server won't have finished sending message #5 by that time, so the
+download part of the connection is _never_ idle after the transfer starts. 
+
+All that makes retchmail go REALLY fast. Almost everyone will find
+retchmail to be at least 3x faster than most POP retrievers, and probably
+more than 5x faster.
+
+
+5. Is retchmail standards-compliant?
+
+Quick answer: HA HA HA HA HA HA no.
+
+Longer answer:
+
+I've read the POP-3 RFC. As far as I can tell, nothing in there
+says we can't do what we're doing. That said, I know perfectly well that
+what we're doing is definitely NOT what the authors intended. So we're in
+compliance with the letter, but not the spirit, of the standard.
+
+Just to be extra clear about this: yes, it is morally wrong for us to have
+written retchmail, and it is morally wrong for you to use it. But try it,
+it's really fast!
+
+
+6. Will the lack of standards-compliance cause problems?
+
+Maybe, if your POP server is badly written. It wouldn't surprise me
+terribly much if this were the case.
+
+The most likely type of bug will be "failure to split packets" or "failure
+to merge packets." Most network programming libraries (not WvStreams) make
+it kind of hard to do simple, obvious things like reading a single line of
+text, and most people writing network code tend to screw it up. Your POP
+server is likely to screw up in one or both of two ways:
+
+- failure to split packets: if extra commands arrive while data is being
+  transferred, or two commands arrive at the same time, stupid POP servers
+  (since they only ever expect one command to be sent before they send a
+  response code) might ignore or give an error to the unexpected commands.
+
+- failure to merge packets: retchmail sends several commands at once, so
+  the data it produces might take more than a single network packet to
+  transmit. If this happens, the packets will probably be split in the
+  middle of a line, so that (say) "RETR 5" is at the end of packet #1,
+  and "6\r\n" is at the beginning of packet #2. Stupid POP servers
+  might not be able to merge those two requests.
+
+The problem you're more likely to experience is the first one, since
+retchmail mostly doesn't produce huge packets. However, your POP server is
+probably more likely to actually _contain_ the second problem, since it's
+harder to test against.
+
+
+7. Do you support IMAP or any non-POP3 protocols?
+
+No, although it wouldn't be very hard to add. Thanks to the handy-dandy (if
+I do say so myself) WvStreams library, retchmail is only 800 lines, so it's
+pretty easy to extend and understand. (Fetchmail is more than 20000 lines
+- 25 times bigger - but they didn't have the benefit of WvStreams or C++.)
+
+In fact, IMAP properly supports pipelined requests, so it would even be
+standards-compliant to do what retchmail does if we used IMAP.
+
+If you want this feature, write it and submit a patch.
+
+
+8. Why do you call the local MTA instead of implementing the entire SMTP
+   protocol inside retchmail? The fetchmail design notes said...
+
+Because that's what the local MTA is for. If you don't want a "full" MTA,
+you should still install a basic one so other packages will work. "sSMTP"
+is a nice, simple, basic /usr/sbin/sendmail implementation that does exactly
+what fetchmail's does, but other programs can use it too.
+
+9. Okay, then, what do you think about "syntactic noise" in config files?
+
+!@#*@!#(*#%^!%$@#';,!@#
+
+10. Are you going to write a long-winded essay about the relationship
+between this program and sociology?
+
+I actually rather liked "The Cathedral and the Bazaar," and it doesn't have
+serious latency problems, so I don't think there's any need to duplicate
+that effort.
+
+In fact, I'll just link to it here:
+	http://www.tuxedo.org/~esr/writings/cathedral-bazaar/
+
+Eventually I _will_ write a long-winded essay about fixing latency problems.
+
+
+11. Are you at least tracking the number of users of retchmail?
+
+As far as I know, retchmail has exactly three users.
+
+
+12. And you'll put that in your essay?
+
+No.
+
+
+13. Who's responsible for this madness?
+
+First, Eric Raymond wrote fetchmail, which was really the inspiration for
+retchmail. And I mean that in the nicest possible way.
+
+Avery Pennarun <apenwarr@nit.ca> wrote the first version of retchmail and
+started this FAQ. When I say "I", I mean me, Avery.
+
+Patrick Patterson <ppatters@nit.ca> added the SSL support and keeps track of
+public releases, since Avery is too busy/lazy.

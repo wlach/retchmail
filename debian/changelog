@@ -1,0 +1,30 @@
+retchmail (0.3) unstable; urgency=high
+
+  * Synchronize with libwvstreams 3.71
+
+  * Make it so that we handle email addresses with @ in them
+
+  * Handle APOP thanks to a patch from markj@cloaked.freeserve.co.uk
+
+  * Fixes core-dump on certain messages
+
+  * Debian Packaging Fixes (Closes: #142527, #142567)
+
+ -- Patrick Patterson <ppatters@nit.ca>  Mon, 29 Jul 2002 18:39:51 -0400
+
+retchmail (0.2) unstable; urgency=low
+
+  * Synchronise with libwvstreams
+
+  * Debian Packaging Fixes
+
+  * Initial Debian release (Closes: #138948)
+
+ -- Patrick Patterson <ppatters@debian.org>  Mon, 28 Jan 2002 14:01:04 -0500
+
+retchmail (0.1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Patrick Patterson <ppatters@nit.ca>  Mon, 28 Jan 2002 14:01:04 -0500
+
