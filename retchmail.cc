@@ -644,12 +644,13 @@ static WvPopClient *newpop(WvStreamList &l, const WvString &acct,
 static void usage(char *argv0, const WvString &deliverto)
 {
     fprintf(stderr,
-	    "Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-t deliverto] [acct...]\n"
+	    "Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c configfile ] [-t deliverto] [acct...]\n"
 	    "     -d   Print debug messages\n"
 	    "     -dd  Print lots of debug messages\n"
 	    "     -q   Quieter: don't print every message header\n"
 	    "     -qq  Way quieter: only print errors\n"
 	    "     -V   Print version and exit\n"
+	    "     -c   Use <configfile> instead of $HOME/.retchmail/retchmail\n"
 	    "     -F   Flush (delete) messages after downloading\n"
 	    "     -t   Deliver mail to <deliverto> (default '%s')\n"
 	    "  acct... list of email accounts (username@host) to "
@@ -668,6 +669,7 @@ int main(int argc, char **argv)
     int c, count;
     WvLog::LogLevel lvl = WvLog::Debug1;
     WvString deliverto("");
+    WvString conffile("");
     
     // make sure electric fence works
     free(malloc(1));
@@ -680,7 +682,7 @@ int main(int argc, char **argv)
 	deliverto.unique();
     }
     
-    while ((c = getopt(argc, argv, "dqVFt:?")) >= 0)
+    while ((c = getopt(argc, argv, "dqVFt:?c:")) >= 0)
     {
 	switch (c)
 	{
@@ -709,6 +711,10 @@ int main(int argc, char **argv)
 	case '?':
 	    usage(argv[0], deliverto);
 	    break;
+	case 'c':
+	    conffile = optarg;
+	    conffile.unique();
+	    break;
 	}
     }
     
@@ -722,7 +728,15 @@ int main(int argc, char **argv)
     
     RetchLog logrcv(lvl);
     
-    WvConf cfg("retchmail.conf", 0600);
+    if (fopen(conffile,"r") == NULL) // Is conffile a valid file??
+    // If not, set it to $HOME/.retchmail/retchmail.conf
+    {
+	conffile = getenv("HOME");
+	conffile.append("/.retchmail/retchmail.conf");
+	conffile.unique();
+    }
+
+    WvConf cfg(conffile, 0600);
     WvStreamList l;
     WvPopClient *cli;
     
