@@ -31,7 +31,7 @@
 #define MAX_REQUESTS 10
 
 // parameters are: int mess_index, bool success
-DeclareWvCallback(2, void, WvSendmailCallback, int, bool);
+typedef WvCallback<void, int, bool> WvSendmailCallback;
 
 class WvSendmailProc : public WvPipe
 {
@@ -222,7 +222,7 @@ WvPopClient::~WvPopClient()
     // disable callbacks for all remaining sendmail procs
     WvSendmailProcDict::Iter i(sendprocs);
     for (i.rewind(); i.next(); )
-	i->cb = NULL;
+	i->cb = WvSendmailCallback();
     
     if (geterr())
 	log(WvLog::Error, "Aborted.  Error was: %s\n", errstr());
@@ -501,7 +501,7 @@ void WvPopClient::execute()
 	const char *argv[] = {mda, deliverto, NULL};
 	//const char *argv[] = {"dd", "of=/dev/null", NULL};
 	WvSendmailProc *p = new WvSendmailProc(argv, next_ack-1,
-	       wvcallback(WvSendmailCallback, *this, WvPopClient::send_done));
+	       WvSendmailCallback(this, &WvPopClient::send_done));
 	sendmails++;
 	
 	while ((line = getline(60*1000)) != NULL)
