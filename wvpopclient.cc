@@ -10,6 +10,7 @@
 
 #include "wvstring.h"
 #include "wvpopclient.h"
+#include "wvistreamlist.h"
 #include "wvdigest.h"
 #include "wvhex.h"
 #include "strutils.h"
@@ -18,12 +19,12 @@
 #define MAX_REQUESTS 10
 
 
-WvPopClient::WvPopClient(WvStream *conn, WvIStreamList &_l,
-			 WvStringParm acct, WvStringParm _password,
+WvPopClient::WvPopClient(WvStream *conn, WvStringParm acct, 
+			 WvStringParm _password,
 			 WvStringParm _deliverto, WvStringParm _mda, 
                          bool _flushing, bool _apop_enable,
                          bool _apop_enable_fallback, bool _explode)
-  : WvStreamClone(conn), l(_l), sendprocs(10),
+  : WvStreamClone(conn), sendprocs(10),
     username(acctparse(acct)), // I hate constructors!
     password(_password), deliverto(_deliverto), mda(_mda),
     log(WvString("PopRetriever %s", acct), WvLog::Debug3)
@@ -77,6 +78,10 @@ WvString WvPopClient::acctparse(WvStringParm acct)
 
 void WvPopClient::cmd(WvStringParm s)
 {
+    // If we're already dead, we should try doing anything...
+    if (!isok())
+	return;
+    
     print("%s\r\n", s);
     
     if (!strncasecmp(s, "pass ", 5))
@@ -103,6 +108,13 @@ void WvPopClient::cmd(WvStringParm s)
 bool WvPopClient::response()
 {
     flush(0);
+
+    if (!isok())
+    {
+	log(WvLog::Critical,"Bailing out since the connection died: %s\n", 
+	    errstr());
+	return false;
+    }
     
     assert(!trace.isempty());
     WvStringList::Iter i(trace);
@@ -394,8 +406,8 @@ void WvPopClient::execute()
 	    else if (in_head && explode && !p
 		     && !strncasecmp(line, "X-Envelope-To: ", 14))
 	    {
-	      WvString sendto = line+strlen("X-Envelope-To:");
-	      sendto.edit();
+		WvString sendto = line+strlen("X-Envelope-To:");
+		sendto.edit();
 		cptr = strchr(sendto, '@');
 		if (cptr)
 		    *cptr = 0;
@@ -418,7 +430,7 @@ void WvPopClient::execute()
 	    }
 	    
 	    if (p)
-	      p->print("%s\n", line);
+		p->print("%s\n", line);
 	}
 	
 	if (isok() && !printed)
@@ -429,11 +441,11 @@ void WvPopClient::execute()
 	}
 	
 	if (p)
-	  {
+	{
 	    p->done();
-	    l.append(p, true, "sendmail");
+	    WvIStreamList::globallist.append(p, true, "sendmail");
 	    sendprocs.add(p, false);
-	  }
+	}
     }
     
     cmd("quit");

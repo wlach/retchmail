@@ -1,6 +1,6 @@
 /*
  * Worldvisions Weaver Software:
- *   Copyright (C) 1997-2003 Net Integration Technologies, Inc.
+ *   Copyright (C) 1997-2004 Net Integration Technologies, Inc.
  *
  * Avery's insanely fast alternative to Fetchmail
  *
@@ -106,7 +106,7 @@ void signal_handler(int signum)
 }
 
 
-static WvPopClient *newpop(WvIStreamList &l, WvStringParm acct,
+static WvPopClient *newpop(WvStringParm acct,
 			   WvStringParm _pass, WvStringParm _deliverto,
                            WvStringParm _mda, bool flush, bool apop_en,
                            bool apop_fall_en, bool explode)
@@ -138,9 +138,9 @@ static WvPopClient *newpop(WvIStreamList &l, WvStringParm acct,
     WvTCPConn *tcp = new WvTCPConn(serv);
     WvStream *conn = tcp;
     if (ssl) // FIXME: ssl verify should probably be set to something.
-	conn = new WvSSLStream(tcp, NULL); 
+	conn = new WvSSLStream(tcp, NULL);
     
-    return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en, explode);
+    return new WvPopClient(conn, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en, explode);
 }
 
 
@@ -181,9 +181,6 @@ int main(int argc, char **argv)
     
     // make sure electric fence works
     free(malloc(1));
-
-    // Initialize wvcrash
-    wvcrash_setup(argv[0]);
 
     signal(SIGPIPE, SIG_IGN);
     
@@ -270,7 +267,6 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    WvIStreamList l;
     WvPopClient *cli;
     bool apop_enable = cfg["retchmail"]["Enable APOP"].getmeint(0);
     bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getmeint(0);
@@ -283,13 +279,13 @@ int main(int argc, char **argv)
 	    UniConf::Iter i(sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = newpop(l, i->key(), i->getme(),
+		cli = newpop(i->key(), i->getme(),
 			     cfg["POP Targets"][i->key()].getme(deliverto),
                              cfg["MDA Override"][i->key()].getme(
 				     "/usr/sbin/sendmail"),
                              flush, apop_enable, apop_enable_fallback,
 			     explode ? : cfg["Explode"][i->key()].getmeint(0));
-		l.append(cli, true, "client");
+		WvIStreamList::globallist.append(cli, true, "client");
 	    }
 	}
 	else
@@ -315,23 +311,20 @@ int main(int argc, char **argv)
 		wvcon->print("\n");
 	    }
 	    
-	    cli = newpop(l, argv[count], pass,
+	    cli = newpop(argv[count], pass,
 			 cfg["POP Targets"][argv[count]].getme(deliverto),
 			 cfg["MDA Override"][argv[count]].getme(
 				 "/usr/sbin/sendmail"),
 			 flush, apop_enable, apop_enable_fallback, explode);
-	    l.append(cli, true, "client");
+	    WvIStreamList::globallist.append(cli, true, "client");
 	}
     }
     
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     
-    while (!l.isempty() && !want_to_die)
-    {
-	if (l.select(1000))
-	    l.callback();
-    }
+    while (!WvIStreamList::globallist.isempty() && !want_to_die)
+    	WvIStreamList::globallist.runonce();
 
     lockfile.unlock();
 }
