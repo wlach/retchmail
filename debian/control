@@ -2,8 +2,9 @@ Source: retchmail
 Section: main/mail
 Priority: optional
 Maintainer: Patrick Patterson <ppatters@debian.org>
-Build-Depends: debhelper (>> 3.0.0), libwvstreams-dev, libssl-dev
-Standards-Version: 3.5.4.0
+Uploaders: James Morrison <phython@debian.org>
+Build-Depends: debhelper (>> 3.0.0), libwvstreams-dev (>= 3.74+20031017), libssl-dev
+Standards-Version: 3.5.9.0
 
 Package: retchmail
 Architecture: any

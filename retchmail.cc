@@ -588,7 +588,13 @@ void WvPopClient::execute()
     return;
     
 fail:
-    seterr("Protocol error from server!");
+    if (cloned && cloned->geterr())
+	seterr("Server connection error: %s", cloned->errstr());
+    else if (!cloned || !cloned->isok())
+	seterr("Server connection closed unexpectedly (%s bytes left)!",
+	       cloned ? inbuf.used() : 0);
+    else
+	seterr("Server said something unexpected!");
     return;
 }
 
