@@ -1,3 +1,4 @@
+#include "wvlockfile.h"
 #include "wvver.h"
 #include "wvtcp.h"
 #include "wvconf.h"
@@ -6,6 +7,7 @@
 #include "wvstreamlist.h"
 #include "wvlogrcv.h"
 #include "wvsslstream.h"
+#include "wvcrypto.h"
 #include "wvhashtable.h"
 #include <signal.h>
 #include <assert.h>
@@ -111,12 +113,13 @@ void WvSendmailProc::done()
 class WvPopClient : public WvStreamClone
 {
 public:
+    WvStream *cloned;
     WvStreamList &l;
     WvString username, password, deliverto, mda;
     WvLog log;
     long res1, res2;
     int  next_req, next_ack, sendmails;
-    bool flushing;
+    bool flushing, apop_enable, apop_enable_fallback;
     WvStringList trace;
     
     struct MsgInfo
@@ -137,7 +140,8 @@ public:
     WvPopClient(WvStream *conn, WvStreamList &_l,
 		WvStringParm acct, WvStringParm _password,
 		WvStringParm _deliverto, WvStringParm _mda, 
-		bool _flushing);
+		bool _flushing, bool _apop_enable,
+                bool _apop_enable_fallback);
     virtual ~WvPopClient();
 
     bool never_select;
@@ -159,17 +163,21 @@ private:
 WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
 			 WvStringParm acct, WvStringParm _password,
 			 WvStringParm _deliverto, WvStringParm _mda, 
-			 bool _flushing)
-    : WvStreamClone(conn), l(_l),
+                         bool _flushing, bool _apop_enable,
+                         bool _apop_enable_fallback )
+    : WvStreamClone(&cloned), l(_l),
 	username(acctparse(acct)), // I hate constructors!
 	password(_password), deliverto(_deliverto), mda(_mda),
         log(WvString("PopRetriever %s", acct), WvLog::Debug3)
 {
     uses_continue_select = true;
     personal_stack_size = 8192;
+    cloned = conn;
     mess = NULL;
     never_select = false;
     flushing = _flushing;
+    apop_enable = _apop_enable;
+    apop_enable_fallback = _apop_enable_fallback;
     next_req = next_ack = sendmails = 0;
     
     log(WvLog::Info, "Retrieve mail from %s into %s.\n", acct, deliverto);
@@ -207,8 +215,15 @@ void WvPopClient::cmd(WvStringParm s)
     
     if (!strncasecmp(s, "pass ", 5))
 	trace.append(new WvString("pass"), true);
+    else if (!strncasecmp(s, "apop ", 5))
+        trace.append(new WvString("apop"), true);
     else
-	trace.append(new WvString(s), true);
+    { 
+        if (!strncasecmp(s, "apop ", 5))
+            trace.append(new WvString("apop"), true);
+        else
+	    trace.append(new WvString(s), true);
+    }
     
     if (!strncasecmp(s, "retr ", 5)) // less important
 	log(WvLog::Debug3, "Send: %s\n", s);
@@ -275,7 +290,7 @@ bool WvPopClient::pre_select(SelectInfo &si)
 void WvPopClient::execute()
 {
     const char format[] = "%20.20s> %-40.40s\n";
-    char *line, *cptr;
+    char *line, *greeting, *start, *end, *cptr;
     int count, nmsgs;
     WvString from, subj;
     bool printed, in_head;
@@ -283,18 +298,50 @@ void WvPopClient::execute()
     WvStreamClone::execute();
     
     // read hello header
-    trace.append(new WvString("HELLO"), true);
-    if (!response()) goto fail;
-    
+    // Adapted for APOP by markj@luminas.co.uk
+    // trace.append(new WvString("HELLO"), true);
+    greeting = getline(60*1000);
+    if ((!greeting) || (strncmp(greeting,"+OK",3))) goto fail;
+    // if (!response()) goto fail;
+    log(WvLog::Debug1, "Recv(HELLO): %s", greeting);
+
     // log in
-    cmd("user %s", username);
-    cmd("pass %s", password);
-    if (!response()) goto fail;
-    
-    if (!response())
+    if (apop_enable && (strrchr(greeting,'>'))) 
     {
-	seterr("Server denied access.  Wrong password?");
-	return;
+        // APOP login attempt -- early code from fetchmail
+        /* build MD5 digest from greeting timestamp + password */
+        /* find start of timestamp */
+        for (start = greeting;  *start != 0 && *start != '<';  start++)
+            continue;
+        if (*start == 0) goto fail;
+
+        /* find end of timestamp */
+        for (end = start;  *end != 0  && *end != '>';  end++)
+            continue;
+        if (*end == 0 || end == start + 1) goto fail;
+        else
+            *++end = '\0';
+        // end of fetchmail code
+        log(WvLog::Debug2, "Using APOP seed: %s\n", start);
+
+        /* copy timestamp and password into digestion buffer */
+        WvString digestsecret("%s%s",start,password);
+
+        WvMD5 resp(digestsecret,false);
+        log(WvLog::Debug2, "Using APOP response: %s\n", (resp.md5_hash()));
+        cmd("apop %s %s",username,(resp.md5_hash()));
+    } 
+
+    if ((!apop_enable) || (!strrchr(greeting,'>')) || ((!response())&&apop_enable_fallback)) {
+        // USER/PASS login
+        cmd("user %s", username);
+        cmd("pass %s", password);
+        if (!response()) goto fail;
+        if (!response())
+        {
+           seterr("Server denied access.  Wrong password?");
+           return;
+        }
     }
 
     // get the number of messages
@@ -602,13 +649,15 @@ void signal_handler(int signum)
 
 static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
 			   WvStringParm _pass, WvStringParm _deliverto,
-		 	   WvStringParm _mda, bool flush)
+                           WvStringParm _mda, bool flush, bool apop_en,
+                           bool apop_fall_en)
+
 {
     WvString user(acct), serv, pass(_pass), deliverto(_deliverto),
             mda(_mda);
     bool ssl = false;
     
-    char *cptr = strchr(user.edit(), '@');
+    char *cptr = strrchr(user.edit(), '@');
     if (cptr)
     {
 	*cptr++ = 0;
@@ -631,7 +680,7 @@ static WvPopClient *newpop(WvStreamList &l, WvStringParm acct,
     if (ssl) // FIXME: ssl verify should probably be 'true'
 	conn = new WvSSLStream(conn, NULL, false); 
     
-    return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush);
+    return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en);
 }
 
 
@@ -708,7 +757,19 @@ int main(int argc, char **argv)
 	    break;
 	}
     }
-    
+
+    WvString lockname("/tmp/retchmail.%s.pid", getlogin());
+    WvLockFile lockfile(lockname);
+
+    if (!lockfile.lock(getpid()))
+    {
+        if (lockfile.getpid() == -1)
+            fprintf(stderr, "Can't access lockfile at %s.\n", lockname.cstr());
+        else
+            fprintf(stderr, "Already running (%i).\n", lockfile.getpid());
+        exit(3);
+    }
+
     if (!deliverto)
     {
 	fprintf(stderr, "Can't detect username for uid#%u.  "
@@ -736,7 +797,9 @@ int main(int argc, char **argv)
     WvConf cfg(conffile, 0600);
     WvStreamList l;
     WvPopClient *cli;
-   
+    bool apop_enable = cfg.get("retchmail", "Enable APOP", 0);
+    bool apop_enable_fallback = cfg.get("retchmail", "Enable APOP Fallback", 0);
+  
     if (optind == argc)	    
     {
 	WvConfigSection *sect = cfg["POP Servers"];
@@ -747,8 +810,9 @@ int main(int argc, char **argv)
 	    {
 		cli = newpop(l, i->name, i->value,
 			     cfg.get("POP Targets", i->name, deliverto),
-                             cfg.get("MDA Override", i->name, "/usr/sbin/sendmail"),
-			     flush);
+                             cfg.get("MDA Override", i->name,
+				     "/usr/sbin/sendmail"),
+                             flush, apop_enable, apop_enable_fallback);
 		l.append(cli, true, "client");
 	    }
 	}
@@ -777,8 +841,9 @@ int main(int argc, char **argv)
 	    
 	    cli = newpop(l, argv[count], pass,
 			 cfg.get("POP Targets", argv[count], deliverto),
-			 cfg.get("MDA Override", argv[count], "/usr/sbin/sendmail"),
-			 flush);
+			 cfg.get("MDA Override", argv[count],
+				 "/usr/sbin/sendmail"),
+			 flush, apop_enable, apop_enable_fallback);
 	    l.append(cli, true, "client");
 	}
     }
@@ -791,4 +856,6 @@ int main(int argc, char **argv)
 	if (l.select(1000))
 	    l.callback();
     }
+
+    lockfile.unlock();
 }
