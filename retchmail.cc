@@ -137,8 +137,8 @@ static WvPopClient *newpop(WvIStreamList &l, WvStringParm acct,
     
     WvTCPConn *tcp = new WvTCPConn(serv);
     WvStream *conn = tcp;
-    if (ssl) // FIXME: ssl verify should probably be 'true'
-	conn = new WvSSLStream(tcp, NULL, false); 
+    if (ssl) // FIXME: ssl verify should probably be set to something.
+	conn = new WvSSLStream(tcp, NULL); 
     
     return new WvPopClient(conn, l, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en, explode);
 }
