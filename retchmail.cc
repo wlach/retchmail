@@ -5,6 +5,8 @@
 #include "wvpipe.h"
 #include "wvstreamlist.h"
 #include "wvlogrcv.h"
+#include "wvsslstream.h"
+#include "wvhashtable.h"
 #include <signal.h>
 #include <assert.h>
 #include <pwd.h>
@@ -108,11 +110,12 @@ void WvSendmailProc::done()
 
 
 
-class WvPopClient : public WvTCPConn
+class WvPopClient : public WvStreamClone
 {
 public:
+    WvStream *cloned;
     WvStreamList &l;
-    WvString username, server, password, deliverto;
+    WvString username, password, deliverto;
     WvLog log;
     long res1, res2;
     int  next_req, next_ack, sendmails;
@@ -133,8 +136,9 @@ public:
     MsgInfo *mess;
     
     
-    WvPopClient(WvStreamList &_l, const WvString &acct,
-		const WvString &_password,
+    // note: we take possession of 'conn' and may delete it at any time!
+    WvPopClient(WvStream *conn, WvStreamList &_l,
+		const WvString &acct, const WvString &_password,
 		const WvString &_deliverto, bool _flushing);
     virtual ~WvPopClient();
 
@@ -150,27 +154,27 @@ public:
     void send_done(int count, bool success);
     
 private:
-    WvString acctparse(const WvString &acct, WvString *user);
+    WvString acctparse(const WvString &acct);
 };
 
 
-WvPopClient::WvPopClient(WvStreamList &_l, const WvString &acct,
-			 const WvString &_password,
+WvPopClient::WvPopClient(WvStream *conn, WvStreamList &_l,
+			 const WvString &acct, const WvString &_password,
 			 const WvString &_deliverto, bool _flushing)
-    : WvTCPConn(acctparse(acct, NULL)), l(_l),
-	server(acctparse(acct, &username)), // I hate constructors!
+    : WvStreamClone(&cloned), l(_l),
+	username(acctparse(acct)), // I hate constructors!
 	password(_password), deliverto(_deliverto), 
-        log(WvString("%s@%s", username, server), WvLog::Debug3)
+        log(WvString("PopRetriever %s", acct), WvLog::Debug3)
 {
     uses_continue_select = true;
     personal_stack_size = 8192;
+    cloned = conn;
     mess = NULL;
     never_select = false;
     flushing = _flushing;
     next_req = next_ack = sendmails = 0;
     
-    log(WvLog::Info, "Retrieve mail from %s@%s into %s.\n",
-	username, server, deliverto);
+    log(WvLog::Info, "Retrieve mail from %s into %s.\n", acct, deliverto);
 }
 
 
@@ -188,25 +192,14 @@ WvPopClient::~WvPopClient()
 }
 
 
-WvString WvPopClient::acctparse(const WvString &acct, WvString *user)
+WvString WvPopClient::acctparse(const WvString &acct)
 {
-    WvString u(acct), serv;
+    WvString u(acct);
     char *cptr = strchr(u.edit(), '@');
     
     if (cptr)
-    {
-	serv = cptr+1;
 	*cptr = 0;
-    }
-    else
-	serv = "localhost";
-    if (!strchr(serv, ':'))
-	serv.append(":110");
-    serv.unique();
-    
-    if (user)
-	*user = u;
-    return serv;
+    return u;
 }
 
 
@@ -275,7 +268,7 @@ bool WvPopClient::select_setup(SelectInfo &si)
 
     if (never_select)
 	si.readable = false;
-    val = WvTCPConn::select_setup(si);
+    val = WvStreamClone::select_setup(si);
     si.readable = oldrd;
     return val;
 }
@@ -289,7 +282,7 @@ void WvPopClient::execute()
     WvString from, subj;
     bool printed, in_head;
     
-    WvTCPConn::execute();
+    WvStreamClone::execute();
     
     // read hello header
     trace.append(new WvString("HELLO"), true);
@@ -535,21 +528,59 @@ void WvPopClient::send_done(int count, bool success)
 }
 
 
+struct LogNum
+{
+    int num;
+    const WvLog *src;
+};
+
+// cheesy hash function to do the job, basically
+unsigned int WvHash(const WvLog *x)
+{
+    return WvHash((int)x);
+}
+
+
+DeclareWvDict(LogNum, const WvLog *, src);
+
+
 class RetchLog : public WvLogConsole
 {
 public:
-    RetchLog(WvLog::LogLevel _max_level) : WvLogConsole(1, _max_level)
-	{ }
+    RetchLog(WvLog::LogLevel _max_level) 
+	: WvLogConsole(1, _max_level), lognums(5)
+	{ maxnum = 0; }
     virtual ~RetchLog() { }
     
     virtual void _begin_line();
+    
+    int maxnum;
+    LogNumDict lognums;
 };
+
 
 void RetchLog::_begin_line()
 {
-    // nothing special
-    if (last_level <= WvLog::Info)
-	write("* ");
+    if (!strncmp(last_source->app, "PopRetriever ", 13))
+    {
+	LogNum *lognum = lognums[last_source];
+	if (!lognum)
+	{
+	    lognum = new LogNum;
+	    lognum->num = ++maxnum;
+	    lognum->src = last_source;
+	    lognums.add(lognum, true);
+	}
+	
+	// identify the connectionw without being too verbose
+	write(lognum->num);
+	if (last_level <= WvLog::Info)
+	    write("* ");
+	else
+	    write("  ");
+    }
+    else
+	WvLogConsole::_begin_line(); // just print the whole thing
 }
 
 
@@ -561,6 +592,44 @@ void signal_handler(int signum)
 	    signum);
     want_to_die = true;
     signal(signum, SIG_DFL);
+}
+
+
+static WvPopClient *newpop(WvStreamList &l, const WvString &acct,
+			   const WvString &_pass, const WvString &_deliverto,
+			   bool flush)
+{
+    WvString user(acct), serv, pass(_pass), deliverto(_deliverto);
+    bool ssl = false;
+    
+    pass.unique();
+    deliverto.unique();
+    
+    char *cptr = strchr(user.edit(), '@');
+    if (cptr)
+    {
+	*cptr++ = 0;
+	serv = cptr;
+	serv.unique();
+    }
+    else
+	serv = "localhost";
+    
+    cptr = strchr(serv.edit(), ':');
+    if (!cptr)
+    {
+	serv.append(":110");
+	cptr = strchr(serv.edit(), ':'); // guaranteed to work now!
+    }
+    
+    if (atoi(cptr+1) == 995)
+	ssl = true;
+    
+    WvStream *conn = new WvTCPConn(serv);
+    if (ssl)
+	conn = new WvSSLStream(conn, NULL, false);
+    
+    return new WvPopClient(conn, l, acct, pass, deliverto, flush);
 }
 
 
@@ -583,6 +652,7 @@ static void usage(char *argv0, const WvString &deliverto)
 
 extern char *optarg;
 extern int optind;
+
 
 int main(int argc, char **argv)
 {
@@ -656,8 +726,9 @@ int main(int argc, char **argv)
 	    WvConfigSection::Iter i(*sect);
 	    for (i.rewind(); i.next(); )
 	    {
-		cli = new WvPopClient(l, i->name, i->value, 
-		      cfg.get("POP Targets", i->name, deliverto), flush);
+		cli = newpop(l, i->name, i->value,
+			     cfg.get("POP Targets", i->name, deliverto),
+			     flush);
 		l.append(cli, true, "client");
 	    }
 	}
@@ -684,8 +755,9 @@ int main(int argc, char **argv)
 		wvcon->print("\n");
 	    }
 	    
-	    cli = new WvPopClient(l, argv[count], WvString(pass).unique(),
-			cfg.get("POP Targets", argv[count], deliverto), flush);
+	    cli = newpop(l, argv[count], pass,
+			 cfg.get("POP Targets", argv[count], deliverto),
+			 flush);
 	    l.append(cli, true, "client");
 	}
     }
