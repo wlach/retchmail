@@ -17,7 +17,7 @@ WVLIB= -L../wvstreams -lwvstreams -lwvutils
 default: retchmail
 all: retchmail
 
-#LIBS = ${EFENCE}
+LIBS = ${EFENCE}
 LDFLAGS += -rdynamic
 
 retchmail-LIBS=${WVLIB} ${SSLLIB} 
