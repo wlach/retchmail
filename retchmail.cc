@@ -309,7 +309,7 @@ int main(int argc, char **argv)
 		wvcon->print("Password for <%s>: ", argv[count]);
 		
 		system("stty -echo 2>/dev/null");
-		pass = wvcon->getline(-1);
+		pass = wvcon->blocking_getline(-1);
 		system("stty echo 2>/dev/null");
 		
 		wvcon->print("\n");

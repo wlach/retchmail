@@ -108,7 +108,7 @@ bool WvPopClient::response()
     WvStringList::Iter i(trace);
     i.rewind(); i.next();
     
-    char *line = getline(60*1000);
+    char *line = blocking_getline(60*1000);
     if (!line)
     {
 	if (isok())
@@ -166,7 +166,7 @@ void WvPopClient::execute()
     // read hello header
     // Adapted for APOP by markj@luminas.co.uk
     // trace.append(new WvString("HELLO"), true);
-    greeting = getline(60*1000);
+    greeting = blocking_getline(60*1000);
     if (!greeting || strncmp(greeting,"+OK", 3)) goto fail;
     // if (!response()) goto fail;
     log(WvLog::Debug1, "Recv(HELLO): %s", greeting);
@@ -228,7 +228,7 @@ void WvPopClient::execute()
     if (!response()) goto fail;
     for (count = 0; count < nmsgs; count++)
     {
-	line = getline(60*1000);
+	line = blocking_getline(60*1000);
 	if (!isok() || !line || 
 	    sscanf(line, "%d %ld", &mess[count].num, &mess[count].len) != 2)
 	{
@@ -236,7 +236,7 @@ void WvPopClient::execute()
 	    goto fail;
 	}
     }
-    line = getline(60*1000);
+    line = blocking_getline(60*1000);
     if (!isok() || !line || strcmp(line, ".") && strcmp(line, ".\r"))
     {
 	log(WvLog::Error, "Invalid LIST terminator: '%s'\n", line);
@@ -339,7 +339,7 @@ void WvPopClient::execute()
 	    sendmails++;
 	  }
 	
-	while ((line = getline(60*1000)) != NULL)
+	while ((line = blocking_getline(60*1000)) != NULL)
 	{
 	    if (!isok())
 	    {
