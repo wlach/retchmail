@@ -1,7 +1,7 @@
 TOPDIR=../..
 include $(TOPDIR)/wvrules.mk
 
-XPATH=.. ../crypto ../ipstreams ../configfile ../streams ../utils
+XPATH=.. ../wvstreams/include
 
 # List of library directories for SSLeay.  Add yours to the list.
 # Don't forget the -L before each directory name!
@@ -14,7 +14,7 @@ all:
 #LIBS = ${EFENCE}
 
 retchmail-LIBS=${SSLLIB}
-retchmail: ../crypto/crypto.a ../libwvstreams.a
+retchmail: ../crypto/crypto.a ../wvstreams/libwvstreams.a
 
 clean:
 	rm -f retchmail
