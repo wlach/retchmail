@@ -1,6 +1,6 @@
 /*
  * Worldvisions Weaver Software:
- *   Copyright (C) 1997-2004 Net Integration Technologies, Inc.
+ *   Copyright (C) 1997-2005 Net Integration Technologies, Inc.
  *
  * Avery's insanely fast alternative to Fetchmail
  *
@@ -20,6 +20,7 @@
 #include "wvlogrcv.h"
 #include "wvsslstream.h"
 #include "wvhashtable.h"
+#include "wvargs.h"
 #include "wvcrash.h"
 #include "wvhex.h"
 
@@ -75,7 +76,7 @@ void RetchLog::_begin_line()
 	    lognums.add(lognum, true);
 	}
 	
-	// identify the connectionw without being too verbose
+	// identify the connection without being too verbose
 	if (lognum->num < 26)
 	{
 	    char str[2];
@@ -144,34 +145,32 @@ static WvPopClient *newpop(WvStringParm acct,
 }
 
 
-static void usage(char *argv0, WvStringParm deliverto)
+static void dec_log_level_cb(void *userdata)
 {
-    wvcon->print("Usage: %s [-d] [-dd] [-q] [-qq] [-V] [-F] [-c moniker ] "
-		 "[-t deliverto] [acct...]\n"
-		 "     -d   Print debug messages\n"
-		 "     -dd  Print lots of debug messages\n"
-		 "     -q   Quieter: don't print every message header\n"
-		 "     -qq  Way quieter: only print errors\n"
-		 "     -V   Print version and exit\n"
-		 "     -c   Use <moniker> instead of "
-		 "ini:~/.retchmail/retchmail\n"
-		 "     -F   Flush (delete) messages after downloading\n"
-	         "     -E   Send mail to the user on the system corresponding to the user the mail is sent to\n"
-		 "     -t   Deliver mail to <deliverto> (default '%s')\n"
-		 "  acct... list of email accounts (username@host) to "
-		 "retrieve from\n",
-		 argv0, (const char *)deliverto);
-    exit(1);
+    WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
+    if ((int)level > (int)WvLog::Critical)
+	level = (WvLog::LogLevel)((int)level - 1);
 }
 
-extern char *optarg;
-extern int optind;
+
+static void inc_log_level_cb(void *userdata)
+{
+    WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
+    if ((int)level < (int)WvLog::Debug5)
+	level = (WvLog::LogLevel)((int)level + 1);
+}
+
+
+static void version_cb(void *userdata)
+{
+    wvcon->print("Retchmail version %s\n", RETCHMAIL_VER_STRING);    
+    exit(2);
+}
 
 
 int main(int argc, char **argv)
 {
     bool flush = false, explode = false;
-    int c, count;
     WvLog::LogLevel lvl = WvLog::Debug1;
     WvString deliverto("");
     WvString confmoniker("");
@@ -188,45 +187,39 @@ int main(int argc, char **argv)
     if (pw)
 	deliverto = pw->pw_name;
 
-    while ((c = getopt(argc, argv, "dqVFEt:c:h?")) >= 0)
-    {
-	switch (c)
-	{
-	case 'd':
-	    if (lvl <= WvLog::Debug1)
-		lvl = WvLog::Debug2;
-	    else
-		lvl = WvLog::Debug5;
-	    break;
-	case 'q':
-	    if (lvl >= WvLog::Debug1)
-		lvl = WvLog::Info;
-	    else
-		lvl = WvLog::Notice;
-	    break;
-	case 'V':
-	    wvcon->print("Retchmail version %s\n", RETCHMAIL_VER_STRING);
-	    return 2;
-	case 'F':
-	    flush = true;
-	    break;
-	case 't':
-	    deliverto = optarg;
-	    break;
-	case 'c':
-	    confmoniker = optarg;
-	    break;
-	case 'E':
-	  explode = true;
-	  break;
-	case 'h':
-	case '?':
-	default:
-	    usage(argv[0], deliverto);
-	    break;
-	}
-    }
+    WvArgs args;
 
+    args.add_option('q', "quiet",
+		    "Decrease log level (can be used multiple times)",
+		    dec_log_level_cb, &lvl);
+    
+    args.add_option('d', "debug",
+		    "Increase log level (can be used multiple times)",
+		    inc_log_level_cb, &lvl);
+
+    args.add_set_bool_option('F', "flush", 
+			     "Flush (delete) messages after downloading",
+			     flush);
+
+    args.add_set_bool_option('E', "explode", 
+			     "Send mail to the user on the system corresponding to the user the mail is sent to",
+			     explode);
+    
+    args.add_option('t', "to", 
+		    WvString("Deliver mail to <deliverto> (default '%s')", deliverto),
+		    "deliverto", deliverto);
+
+    args.add_option('c', "config",
+		    "Use <moniker> instead of ini:~/.retchmail/retchmail",
+		    "moniker", confmoniker);
+    
+    args.add_option('V', "version",
+		    "Display version and exit",
+		    version_cb);
+    
+    WvStringList arguments;
+    args.process(argc, argv, &arguments);
+    
     WvString lockname("/tmp/retchmail.%s.pid", getlogin());
     WvLockFile lockfile(lockname);
 
@@ -248,7 +241,6 @@ int main(int argc, char **argv)
 	return 3;
     }
     
-    
     RetchLog logrcv(lvl);
     
     if (!confmoniker)
@@ -267,11 +259,11 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    WvPopClient *cli;
+    WvPopClient *cli = NULL;
     bool apop_enable = cfg["retchmail"]["Enable APOP"].getmeint(0);
     bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getmeint(0);
   
-    if (optind == argc)	    
+    if (arguments.isempty())	    
     {
         UniConf sect = cfg["POP Servers"];
 	if (sect.haschildren())
@@ -292,17 +284,18 @@ int main(int argc, char **argv)
 	{
 	    fprintf(stderr, "\n-- No config file and no accounts given on the "
 		    "command line!\n");
-	    usage(argv[0], deliverto);
+	    args.print_usage(argc, argv);
 	}
     }
     else
     {
-	for (count = optind; count < argc; count++)
+	while (!arguments.isempty());
 	{
-	    WvString pass = cfg["POP Servers"][argv[count]].getme();
+	    WvString user(arguments.popstr());
+	    WvString pass = cfg["POP Servers"][user].getme();
 	    if (!pass)
 	    {
-		wvcon->print("Password for <%s>: ", argv[count]);
+		wvcon->print("Password for <%s>: ", user);
 		
 		system("stty -echo 2>/dev/null");
 		pass = wvcon->blocking_getline(-1);
@@ -311,9 +304,9 @@ int main(int argc, char **argv)
 		wvcon->print("\n");
 	    }
 	    
-	    cli = newpop(argv[count], pass,
-			 cfg["POP Targets"][argv[count]].getme(deliverto),
-			 cfg["MDA Override"][argv[count]].getme(
+	    cli = newpop(user, pass,
+			 cfg["POP Targets"][user].getme(deliverto),
+			 cfg["MDA Override"][user].getme(
 				 "/usr/sbin/sendmail"),
 			 flush, apop_enable, apop_enable_fallback, explode);
 	    WvIStreamList::globallist.append(cli, true, "client");
