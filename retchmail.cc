@@ -297,9 +297,9 @@ void WvPopClient::execute()
     
     // log in
     cmd("user %s", username);
+    cmd("pass %s", password);
     if (!response()) goto fail;
     
-    cmd("pass %s", password);
     if (!response())
     {
 	seterr("Server denied access.  Wrong password?");
@@ -308,6 +308,7 @@ void WvPopClient::execute()
 
     // get the number of messages
     cmd("stat");
+    cmd("list"); // for later
     if (!response()) goto fail;
     log(WvLog::Info, "%s %s in %s bytes.\n", res1,
 	res1==1 ? "message" : "messages", res2);
@@ -315,7 +316,6 @@ void WvPopClient::execute()
     mess = new MsgInfo[nmsgs];
     
     // get the list of messages and their sizes
-    cmd("list");
     if (!response()) goto fail;
     for (count = 0; count < nmsgs; count++)
     {
