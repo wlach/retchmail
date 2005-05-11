@@ -3,7 +3,7 @@ Section: mail
 Priority: optional
 Maintainer: Simon Law <sfllaw@debian.org>
 Uploaders: James Morrison <phython@debian.org>, Patrick Patterson <ppatters@debian.org>
-Build-Depends: debhelper (>> 4.0), libwvstreams-dev (>= 4.0.1), libssl-dev
+Build-Depends: debhelper (>> 4.0), libwvstreams-dev (>= 5.0), libssl-dev, pkg-config
 Standards-Version: 3.6.1
 
 Package: retchmail
