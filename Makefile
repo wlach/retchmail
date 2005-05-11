@@ -17,7 +17,7 @@ ifeq ($(TOPDIR),)
  ifeq ($(PC_LIBS),)
   $(error WvStreams does not appear to be installed)
  endif
- LDFLAGS+=$(PC_LIBS)
+ LIBS+=$(PC_LIBS)
 else
  XPATH=..
 endif
