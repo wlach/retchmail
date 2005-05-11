@@ -1,3 +1,22 @@
+retchmail (1:0.09-3) unstable; urgency=low
+
+  * Update config documentation. (Closes: #302884)
+
+ -- James Morrison <phython@debian.org>  Sun,  3 Apr 2005 13:19:30 -0400
+
+retchmail (1:0.09-2) unstable; urgency=low
+
+  * Only use low bits of WvLog pointer in WvHash function. (Closes: #302372)
+  * Use xplc 0.3.11.
+
+ -- James Morrison <phython@debian.org>  Sat,  2 Apr 2005 11:23:20 -0500
+
+retchmail (1:0.09-1) unstable; urgency=low
+
+  * New upstream release.  (Closes: #290999)
+
+ -- James Morrison <phython@debian.org>  Wed, 22 Mar 2004 22:16:03 -0500
+
 retchmail (1:0.04-2) unstable; urgency=low
 
   * Don't call callbacks when they are empty. (Closes: #232469)

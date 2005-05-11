@@ -6,7 +6,18 @@ retchmail \- The world's most stupidly fast POP3 retriever.
 
 .SH SYNOPSIS
 .B retchmail
-.I "\-d | \-dd | \-q | \-qq | \-c | \-V | \-E | \-F | \-t deliverto | fromacct..."
+.BR \-d \ |
+.BR \-dd \ |
+.BR \-q \ |
+.BR \-qq \ |
+.BR \-c \ |
+.BR \-V \ |
+.BR \-E \ |
+.BR \-F \ |
+.br
+.ti 17
+.BI \-t\  deliverto\fR\ |
+.IR fromacct ..."
 
 .SH DESCRIPTION
 .B retchmail
@@ -18,7 +29,9 @@ program, except that it is blazingly fast, and only handles POP3 and POP3s
 When
 .B retchmail
 starts, it first loads its configuration from
-.IR ~/.retchmailrc ,
+.hy 0
+.IR ~/.retchmail/retchmail.conf ,
+.hy 14
 which contains basic information about the accounts, mailboxes, etc.
 .PP
 It will then go out and retrieve all of the mail from those accounts. 
@@ -27,53 +40,57 @@ It will then go out and retrieve all of the mail from those accounts.
 Several options are recognized by
 .BR retchmail .
 .TP
-.I "\-q"
+.B \-q
 Run in quiet mode (Don't print every message header)
 .TP
-.I "\-qq"
+.B \-qq
 Run in REALLY quiet mode (only print error messages)
 .TP
-.I "\-c \fR[\|\fIconfigfile\fR\|]
-Run retchmail with configfile as the configuration file (instead of
-$HOME/.retchmailrc). 
+.B \-c \fR[\|\fIconfig_moniker\fR\|]
+Run retchmail with \fIconfig_moniker\fR as the configuration file (instead of
+ini:$HOME/.retchmail/retchmail.conf). 
 .TP
-.I "\-E"
+.B \-E
 Explode a multidrop mailbox and deliver mail to the users that X-Envelope-To
 says to.
 .TP
-.I "\-F"
+.B \-F
 Flush all messages after downloading - you probably want to make sure this
 is on the command line, or else you will keep downloading the same messages
 over and over and over and (you get the idea).
 .TP
-.I "\-V"
+.B \-V
 Prints the current
 .B retchmail
 version information and exits.
 .TP
-.I "\-d"
+.B \-d
 Displays debug information for troubleshooting
 .BR retchmail
 .TP
-.I "\-dd"
+.B \-dd
 Displays a lot of debug information for troubleshooting
 .BR retchmail.
 Use this option when reporting any bugs or problems with the program. 
 .PP
 .SH BUGS
 Probably very few, but if you find any, please report them to 
-.BR <retchmail@nit.ca> .
+.hy 0
+.BR <retchmail\-bugs@nit.ca> .
+.hy 14
 .PP
 Also, there is now a mailing list for discussion about
 .BR retchmail .
 If you are having problems, or have anything else to say, send e-mail to
-.BR <retchmail\-list@lists.nit.ca> .
+.hy 0
+.BR <wvstreams\-dev@lists.nit.ca> .
+.hy 14
 .PP
 .SH FILES
 .TP
-$HOME/.retchmailrc
+$HOME/.retchmail/retchmail.conf
 Configuration file which contains account, passwords and delivery
-information. See retchmailrc(5).
+information. See retchmail.conf(5).
 .PP
 .SH AUTHORS
 Avery Pennarun and Patrick Patterson for Net Integration Technologies Inc., as
@@ -81,10 +98,10 @@ part of the NetIntegrator project.
 .SH CONTRIBUTORS
 MJ Ray for Luminas Ltd added APOP, as part of internal systems development.
 .PP
-.SH SEE ALSO
-.BR retchmailrc (5),
-.PP
 .SH FAQ
 .TP
-.BR http://open.nit.ca/retchmail
+.BR http://open.nit.ca/wiki/index.php?page=RetchMail
+.PP
+.SH SEE ALSO
+.BR retchmail.conf (5),
 .PP

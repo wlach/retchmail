@@ -31,7 +31,7 @@ install-man:
 	[ -d ${prefix}/share/man/man1 ] || install -d ${prefix}/share/man/man1
 	[ -d ${prefix}/share/man/man5 ] || install -d ${prefix}/share/man/man5
 	install -m 0644 retchmail.1 ${prefix}/share/man/man1
-	install -m 0644 retchmailrc.5 ${prefix}/share/man/man5
+	install -m 0644 retchmail.conf.5 ${prefix}/share/man/man5
 
 clean:
 	rm -f retchmail

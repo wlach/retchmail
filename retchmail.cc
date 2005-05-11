@@ -42,7 +42,7 @@ struct LogNum
 // cheesy hash function to do the job, basically
 unsigned int WvHash(const WvLog *x)
 {
-    return WvHash((int)x);
+    return WvHash((ptrdiff_t)x & (unsigned int)-1);
 }
 
 

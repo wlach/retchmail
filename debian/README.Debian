@@ -1,0 +1,14 @@
+Upstream has decided to change the way configuration is done with RetchMail.
+RetchMail now uses uniconf so you are no longer limited to configuring
+RetchMail with a file.  However, the default configuration file has now
+changed.  The format is still the same, but the file is now:
+
+	$HOME/.retchmail/retchmail.conf
+
+and some form of configuration is required.  If you have been using the
+-c config_file option before you will now need to specify what type of
+configuration is being used,
+ e.g. 
+	retchmail -c config_file 
+ becomes
+	retchmail -c ini:config_file
