@@ -8,6 +8,7 @@
  * license.
  */
 
+#include <unistd.h>
 #include "wvstring.h"
 #include "wvpopclient.h"
 #include "wvistreamlist.h"
@@ -27,11 +28,11 @@ WvPopClient::WvPopClient(WvStream *conn, WvStringParm acct,
   : WvStreamClone(conn), sendprocs(10),
     username(acctparse(acct)), // I hate constructors!
     password(_password), deliverto(_deliverto), mda(_mda),
-    log(WvString("PopRetriever %s", acct), WvLog::Debug3)
+    log(WvString("PopRetriever %s", acct), WvLog::Debug3),
+    not_found(false)
 {
     uses_continue_select = true;
     personal_stack_size = 65536;
-    mess = NULL;
     never_select = false;
     flushing = _flushing;
     apop_enable = _apop_enable;
@@ -59,9 +60,6 @@ WvPopClient::~WvPopClient()
 	log(WvLog::Error, "Aborted.  Error was: %s\n", errstr());
     else
 	log(WvLog::Info, "Done.\n");
-    
-    if (mess)
-	deletev mess;
 }
 
 
@@ -142,11 +140,9 @@ bool WvPopClient::response()
 }
 
 
-static int messcompare(const void *_a, const void *_b)
+static int messcompare(const WvPopClient::MsgInfo *a,
+		       const WvPopClient::MsgInfo *b)
 {
-    const WvPopClient::MsgInfo *a = (WvPopClient::MsgInfo *)_a;
-    const WvPopClient::MsgInfo *b = (WvPopClient::MsgInfo *)_b;
-    
     long base = 10240;
     long alen = a->len / base, blen = b->len / base;
     return (alen*base + a->num) - (blen*base + b->num);
@@ -234,15 +230,17 @@ void WvPopClient::execute()
     log(WvLog::Info, "%s %s in %s bytes.\n", res1,
 	res1==1 ? "message" : "messages", res2);
     nmsgs = res1;
-    mess = new MsgInfo[nmsgs];
+    mess.set_capacity(nmsgs);
     
     // get the list of messages and their sizes
     if (!response()) goto fail;
     for (count = 0; count < nmsgs; count++)
     {
 	line = blocking_getline(60*1000);
+	mess.append(new MsgInfo(), true);
 	if (!isok() || !line || 
-	    sscanf(line, "%d %ld", &mess[count].num, &mess[count].len) != 2)
+	    sscanf(line, "%d %ld",
+		   &(mess[count]->num), &(mess[count]->len)) != 2)
 	{
 	    log(WvLog::Error, "Invalid LIST response: '%s'\n", line);
 	    goto fail;
@@ -254,28 +252,28 @@ void WvPopClient::execute()
 	log(WvLog::Error, "Invalid LIST terminator: '%s'\n", line);
 	goto fail;
     }
-    
+
     // sort the list in order of size
-    qsort(mess, nmsgs, sizeof(mess[0]), messcompare);
-    
+    mess.qsort(messcompare);
+
     while (next_ack < nmsgs 
-	   || (next_ack && mess[next_ack-1].deletes_after_this) || sendmails)
+	   || (next_ack && mess[next_ack-1]->deletes_after_this) || sendmails)
     {
 	if (!isok()) break;
 	log(WvLog::Debug4, "next_ack=%s/%s dels=%s sendmails=%s/%s\n",
 	    next_ack, nmsgs,
-	    mess[0].deletes_after_this, sendmails,
+	    mess[0]->deletes_after_this, sendmails,
 	    WvSendmailProc::num_sendmails);
 	
 	while (next_req < nmsgs && next_req-next_ack < MAX_REQUESTS)
 	{
-	    cmd("retr %s", mess[next_req].num);
+	    cmd("retr %s", mess[next_req]->num);
 	    next_req++;
 	}
     
-	MsgInfo &m = mess[next_ack];
+	MsgInfo *m = mess[next_ack];
 	
-	while (next_ack > 0 && mess[next_ack-1].deletes_after_this)
+	while (next_ack > 0 && mess[next_ack-1]->deletes_after_this)
 	{
 	    if (!response())
 	    {
@@ -286,7 +284,7 @@ void WvPopClient::execute()
 		flushing = false;
 	    }
 	    
-	    mess[next_ack-1].deletes_after_this--;
+	    mess[next_ack-1]->deletes_after_this--;
 	    
 	    if (!isok())
 		goto fail;
@@ -303,7 +301,7 @@ void WvPopClient::execute()
 	if (!response() && isok())
 	{
 	    next_ack++;
-	    log(WvLog::Warning, "Hmm... missing message #%s.\n", m.num);
+	    log(WvLog::Warning, "Hmm... missing message #%s.\n", m->num);
 	    continue;
 	}
 	
@@ -317,17 +315,17 @@ void WvPopClient::execute()
 	next_ack++;
 	
 	WvString size;
-	if (m.len > 10*1024*1024)
-	    size = WvString("%sM", m.len/1024/1024);
-	else if (m.len >= 10*1024)
-	    size = WvString("%sk", m.len/1024);
-	else if (m.len > 1024)
-	    size = WvString("%s.%sk", m.len/1024, (m.len*10/1024) % 10);
+	if (m->len > 10*1024*1024)
+	    size = WvString("%sM", m->len/1024/1024);
+	else if (m->len >= 10*1024)
+	    size = WvString("%sk", m->len/1024);
+	else if (m->len > 1024)
+	    size = WvString("%s.%sk", m->len/1024, (m->len*10/1024) % 10);
 	else
-	    size = WvString("%sb", m.len);
+	    size = WvString("%sb", m->len);
 	
 	log(WvLog::Debug1, "%-6s %6s ", 
-	    WvString("[%s]", mess[next_ack-1].num), size);
+	    WvString("[%s]", mess[next_ack-1]->num), size);
 	
 	from = "";
 	subj = "";
@@ -340,7 +338,15 @@ void WvPopClient::execute()
 	    continue_select(1000);
 	    never_select = false;
 	}
-	
+
+	{
+	    if (access(mda, X_OK))
+	    {
+		log(WvLog::Error, "%s: %s\n", mda, strerror(errno));
+		not_found = true;
+		goto fail;
+	    }
+	}
 	const char *argv[] = {mda, deliverto, NULL};
 	//const char *argv[] = {"dd", "of=/dev/null", NULL};
 	WvSendmailProc *p = NULL; 
@@ -460,6 +466,8 @@ fail:
     else if (!cloned || !cloned->isok())
 	seterr("Server connection closed unexpectedly (%s bytes left)!",
 	       cloned ? inbuf.used() : 0);
+    else if (not_found)
+	seterr("MDA could not be executed!");
     else
 	seterr("Server said something unexpected!");
     return;
@@ -468,7 +476,6 @@ fail:
 
 void WvPopClient::send_done(int count, bool success)
 {
-    assert(mess);
     log(WvLog::Debug4, "send_done %s (success=%s)\n", count+1, success);
     
     WvSendmailProc *proc = sendprocs[count];
@@ -479,20 +486,20 @@ void WvPopClient::send_done(int count, bool success)
 
     if (!success)
     {
-	log(WvLog::Warning, "Error delivering message %s to sendmail.\n",
-	    mess[count].num);
+	log(WvLog::Warning, "Error delivering message %s to the MDA.\n",
+	    mess[count]->num);
     }
     else
     {
-	mess[count].sent = true;
+	mess[count]->sent = true;
 	
 	// remember that we had one more delete message after the most recent
 	// request (which might have no relation to the message we're deleting,
 	// but we have to count responses carefully!)
 	if (flushing)
 	{
-	    cmd("dele %s", mess[count].num);
-	    mess[next_req-1].deletes_after_this++;
+	    cmd("dele %s", mess[count]->num);
+	    mess[next_req-1]->deletes_after_this++;
 	}
     }
     

@@ -13,6 +13,7 @@
 #include "wvstring.h"
 #include "wvhashtable.h"
 #include "wvlog.h"
+#include "wvvector.h"
 
 #ifndef WVPOPCLIENT_H
 #define WVPOPCLIENT_H 1
@@ -29,21 +30,25 @@ public:
     int  next_req, next_ack, sendmails;
     bool flushing, apop_enable, apop_enable_fallback, explode;
     WvStringList trace;
-    
+
     struct MsgInfo
     {
 	int num;                // message number
 	long len;               // message length (bytes)
 	bool sent,              // message _fully_ transferred to sendmail
 	     deleted;           // server acknowledged DELE command
+	WvString err;		// error message
 	int deletes_after_this; // number of DELE messages following this RETR
-	
-	MsgInfo() { num = 0; len = 0; sent = deleted = false; 
-		     deletes_after_this = 0; }
+
+	MsgInfo()
+	  : num(0), len(0), sent(false), deleted(false),
+	    deletes_after_this(0)
+	{
+	}
     };
-    MsgInfo *mess;
-    
-    
+    DeclareWvVector(MsgInfo);
+    MsgInfoVector mess;
+
     // note: we take possession of 'conn' and may delete it at any time!
     WvPopClient(WvStream *conn,
 		WvStringParm acct, WvStringParm _password,
@@ -65,6 +70,7 @@ public:
     
 private:
     WvString acctparse(WvStringParm acct);
+    bool not_found;
 };
 
 #endif // WVPOPCLIENT_H
