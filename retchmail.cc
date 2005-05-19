@@ -218,7 +218,8 @@ int main(int argc, char **argv)
 		    version_cb);
     
     WvStringList arguments;
-    args.process(argc, argv, &arguments);
+    if (!args.process(argc, argv, &arguments))
+	return 255;
     
     WvString lockname("/tmp/retchmail.%s.pid", getlogin());
     WvLockFile lockfile(lockname);
