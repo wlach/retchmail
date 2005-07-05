@@ -24,7 +24,8 @@ WvPopClient::WvPopClient(WvStream *conn, WvStringParm acct,
 			 WvStringParm _password,
 			 WvStringParm _deliverto, WvStringParm _mda, 
                          bool _flushing, bool _apop_enable,
-                         bool _apop_enable_fallback, bool _explode)
+                         bool _apop_enable_fallback, bool _explode,
+			 bool _safemode, bool _ignorerp)
   : WvStreamClone(conn), sendprocs(10),
     username(acctparse(acct)), // I hate constructors!
     password(_password), deliverto(_deliverto), mda(_mda),
@@ -39,6 +40,13 @@ WvPopClient::WvPopClient(WvStream *conn, WvStringParm acct,
     apop_enable_fallback = _apop_enable_fallback;
     next_req = next_ack = sendmails = 0;
     explode = _explode;
+    safemode = _safemode;
+    ignorerp = _ignorerp;
+    max_requests = MAX_REQUESTS;
+
+    if (safemode)
+	max_requests = 1;
+    safe_deletes.zap();
     
     log(WvLog::Info, "Retrieve mail from %s into %s.\n", acct, deliverto);
 }
@@ -60,6 +68,8 @@ WvPopClient::~WvPopClient()
 	log(WvLog::Error, "Aborted.  Error was: %s\n", errstr());
     else
 	log(WvLog::Info, "Done.\n");
+
+    safe_deletes.zap();
 }
 
 
@@ -167,7 +177,7 @@ void WvPopClient::execute()
     char *line, *greeting, *start, *end, *cptr;
     int count, nmsgs;
     WvString from, subj;
-    bool printed, in_head;
+    bool printed, in_head, msgdone;
     
     WvStreamClone::execute();
     
@@ -257,15 +267,35 @@ void WvPopClient::execute()
     mess.qsort(messcompare);
 
     while (next_ack < nmsgs 
-	   || (next_ack && mess[next_ack-1]->deletes_after_this) || sendmails)
+	   || (next_ack && mess[next_ack-1]->deletes_after_this)
+	   || sendmails || safe_deletes.count() > 0)
     {
 	if (!isok()) break;
 	log(WvLog::Debug4, "next_ack=%s/%s dels=%s sendmails=%s/%s\n",
 	    next_ack, nmsgs,
 	    mess[0]->deletes_after_this, sendmails,
 	    WvSendmailProc::num_sendmails);
-	
-	while (next_req < nmsgs && next_req-next_ack < MAX_REQUESTS)
+
+	// do any necessary safe deletes
+	while (safemode && safe_deletes.count() > 0 &&
+		next_req-next_ack < max_requests)
+	{
+	    cmd(safe_deletes.popstr());
+	    if (!response())
+	    {
+		log(WvLog::Warning, "Failed safe deleting a message!?\n");
+		if (flushing)
+		    log(WvLog::Warning, "Canceling future deletions "
+			"to protect the innocent.\n");
+		flushing = false;
+		safe_deletes.zap();
+	    }
+
+	    if (!isok())
+		goto fail;
+	}
+
+	while (next_req < nmsgs && next_req-next_ack < max_requests)
 	{
 	    cmd("retr %s", mess[next_req]->num);
 	    next_req++;
@@ -283,7 +313,7 @@ void WvPopClient::execute()
 			"to protect the innocent.\n");
 		flushing = false;
 	    }
-	    
+	   
 	    mess[next_ack-1]->deletes_after_this--;
 	    
 	    if (!isok())
@@ -331,6 +361,7 @@ void WvPopClient::execute()
 	subj = "";
 	printed = false;
 	in_head = true;
+	msgdone = false;
 	
 	while (WvSendmailProc::num_sendmails >= MAX_PROCESSES && isok())
 	{
@@ -366,13 +397,6 @@ void WvPopClient::execute()
 		seterr("Connection dropped while reading message contents!");
 		return;
 	    }
-	    if (!line)
-	    {
-	      if (p)
-		p->kill(SIGTERM);
-		seterr(ETIMEDOUT);
-		return;
-	    }
 	    
 	    // remove \r character, if the server gave one
 	    cptr = strchr(line, 0) - 1;
@@ -384,7 +408,10 @@ void WvPopClient::execute()
 	    if (line[0]=='.')
 	    {
 		if (!strcmp(line, ".") || !strcmp(line, ".\r"))
+		{
+		    msgdone = true;
 		    break; // dot on a line by itself: done this message.
+		}
 		else
 		{
 		    // POP servers turn any line *starting with* a dot into
@@ -434,11 +461,24 @@ void WvPopClient::execute()
 		log(WvLog::Debug1, format, from, subj);
 		printed = true;
 	    }
-	    
-	    if (p)
+	   
+	    // ideally we might try to fix the Return-Path here but that
+	    // could turn out to be a parsing nightmare so we're going to
+	    // just dump it if their POP3 server mangles it
+	    //
+	    if (p && (!in_head || !ignorerp ||
+			strncasecmp(line, "Return-Path: ", 13)))
 		p->print("%s\n", line);
 	}
-	
+
+	if (isok() && !msgdone)
+	{
+	    if (p)
+	        p->kill(SIGTERM);
+	    seterr(ETIMEDOUT);
+	    return;
+	}
+
 	if (isok() && !printed)
 	{
 	    if (!subj) subj = "<NO SUBJECT>";
@@ -498,8 +538,19 @@ void WvPopClient::send_done(int count, bool success)
 	// but we have to count responses carefully!)
 	if (flushing)
 	{
-	    cmd("dele %s", mess[count]->num);
-	    mess[next_req-1]->deletes_after_this++;
+	    // in safe mode we do all deletes at the end
+	    if (safemode)
+	    {
+	        log(WvLog::Debug3, "Queueing message %s for deletion\n",
+			mess[count]->num);
+		safe_deletes.append(
+			new WvString("dele %s", mess[count]->num), true);
+	    }
+	    else
+	    {
+	        cmd("dele %s", mess[count]->num);
+	        mess[next_req-1]->deletes_after_this++;
+	    }
 	}
     }
     

@@ -36,17 +36,11 @@
 struct LogNum
 {
     int num;
-    const WvLog *src;
+    WvString src;
 };
 
-// cheesy hash function to do the job, basically
-unsigned int WvHash(const WvLog *x)
-{
-    return WvHash((ptrdiff_t)x & (unsigned int)-1);
-}
+DeclareWvDict(LogNum, WvString, src);
 
-
-DeclareWvDict(LogNum, const WvLog *, src);
 
 class RetchLog : public WvLogConsole
 {
@@ -65,7 +59,7 @@ public:
 
 void RetchLog::_begin_line()
 {
-    if (!strncmp(last_source->app, "PopRetriever ", 13))
+    if (!strncmp(last_source, "PopRetriever ", 13))
     {
 	LogNum *lognum = lognums[last_source];
 	if (!lognum)
@@ -110,7 +104,8 @@ void signal_handler(int signum)
 static WvPopClient *newpop(WvStringParm acct,
 			   WvStringParm _pass, WvStringParm _deliverto,
                            WvStringParm _mda, bool flush, bool apop_en,
-                           bool apop_fall_en, bool explode)
+                           bool apop_fall_en, bool explode, bool safemode,
+			   bool ignorerp)
 
 {
     WvString user(acct), serv, pass(_pass), deliverto(_deliverto),
@@ -141,7 +136,7 @@ static WvPopClient *newpop(WvStringParm acct,
     if (ssl) // FIXME: ssl verify should probably be set to something.
 	conn = new WvSSLStream(tcp, NULL);
     
-    return new WvPopClient(conn, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en, explode);
+    return new WvPopClient(conn, acct, pass, deliverto, mda, flush, apop_en, apop_fall_en, explode, safemode, ignorerp);
 }
 
 
@@ -263,6 +258,8 @@ int main(int argc, char **argv)
     WvPopClient *cli = NULL;
     bool apop_enable = cfg["retchmail"]["Enable APOP"].getmeint(0);
     bool apop_enable_fallback = cfg["retchmail"]["Enable APOP Fallback"].getmeint(0);
+    bool safemode = cfg["retchmail"]["Safe Mode"].getmeint(0);
+    bool ignorerp = cfg["retchmail"]["Ignore Return-Path"].getmeint(0);
   
     if (arguments.isempty())	    
     {
@@ -277,7 +274,8 @@ int main(int argc, char **argv)
                              cfg["MDA Override"][i->key()].getme(
 				     "/usr/sbin/sendmail"),
                              flush, apop_enable, apop_enable_fallback,
-			     explode ? : cfg["Explode"][i->key()].getmeint(0));
+			     explode ? : cfg["Explode"][i->key()].getmeint(0),
+			     safemode, ignorerp);
 		WvIStreamList::globallist.append(cli, true, "client");
 	    }
 	}
@@ -309,7 +307,8 @@ int main(int argc, char **argv)
 			 cfg["POP Targets"][user].getme(deliverto),
 			 cfg["MDA Override"][user].getme(
 				 "/usr/sbin/sendmail"),
-			 flush, apop_enable, apop_enable_fallback, explode);
+			 flush, apop_enable, apop_enable_fallback, explode,
+			 safemode, ignorerp);
 	    WvIStreamList::globallist.append(cli, true, "client");
 	}
     }

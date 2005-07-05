@@ -31,6 +31,12 @@ public:
     bool flushing, apop_enable, apop_enable_fallback, explode;
     WvStringList trace;
 
+    bool safemode;
+    int max_requests;
+    WvStringList safe_deletes;
+
+    bool ignorerp;
+    
     struct MsgInfo
     {
 	int num;                // message number
@@ -54,7 +60,8 @@ public:
 		WvStringParm acct, WvStringParm _password,
 		WvStringParm _deliverto, WvStringParm _mda, 
 		bool _flushing, bool _apop_enable,
-                bool _apop_enable_fallback, bool _explode);
+                bool _apop_enable_fallback, bool _explode,
+		bool _safemode, bool _ignorerp);
     virtual ~WvPopClient();
 
     bool never_select;
@@ -67,7 +74,7 @@ public:
     bool response();
     
     void send_done(int count, bool success);
-    
+
 private:
     WvString acctparse(WvStringParm acct);
     bool not_found;
