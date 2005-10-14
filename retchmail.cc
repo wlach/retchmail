@@ -140,26 +140,21 @@ static WvPopClient *newpop(WvStringParm acct,
 }
 
 
-static void dec_log_level_cb(void *userdata)
+static bool dec_log_level_cb(void *userdata)
 {
     WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
     if ((int)level > (int)WvLog::Critical)
 	level = (WvLog::LogLevel)((int)level - 1);
+    return true;
 }
 
 
-static void inc_log_level_cb(void *userdata)
+static bool inc_log_level_cb(void *userdata)
 {
     WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
     if ((int)level < (int)WvLog::Debug5)
 	level = (WvLog::LogLevel)((int)level + 1);
-}
-
-
-static void version_cb(void *userdata)
-{
-    wvcon->print("Retchmail version %s\n", RETCHMAIL_VER_STRING);    
-    exit(2);
+    return true;
 }
 
 
@@ -208,9 +203,7 @@ int main(int argc, char **argv)
 		    "Use <moniker> instead of ini:~/.retchmail/retchmail",
 		    "moniker", confmoniker);
     
-    args.add_option('V', "version",
-		    "Display version and exit",
-		    version_cb);
+    args.set_version("Retchmail version " RETCHMAIL_VER_STRING "\n");
     
     WvStringList arguments;
     if (!args.process(argc, argv, &arguments))
