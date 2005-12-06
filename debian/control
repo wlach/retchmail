@@ -3,14 +3,15 @@ Section: mail
 Priority: optional
 Maintainer: Simon Law <sfllaw@debian.org>
 Uploaders: James Morrison <phython@debian.org>, Patrick Patterson <ppatters@debian.org>
-Build-Depends: debhelper (>> 4.0), libwvstreams-dev (>= 5.0), libssl-dev, pkg-config
-Standards-Version: 3.6.1
+Build-Depends: debhelper (>> 4.0), libwvstreams-dev (>= 4.2), libssl-dev, pkg-config
+Standards-Version: 3.6.2.1
 
 Package: retchmail
 Architecture: any
 Depends: ${shlibs:Depends}
 Provides: popclient
-Description: REALLY Fast POP3 Retriever
- Supports simultaneous pop3 and pop3s mail retrieval from multiple sites to 
- multiple mailboxes, and has as its primary goal to do it as fast and as
- accurately as possible. 
+Description: Stupidly fast POP3 retriever
+ Retchmail is the world's most stupidly fast POP3 retriever.  It supports
+ simultaneous POP3 and POP3S mail retrieval from multiple sites to multiple
+ mailboxes.  Retchmail is good for quick retrieval of e-mail if you do not
+ need the features of other, more comprehensive, retrievers like Fetchmail.

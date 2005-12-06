@@ -30,7 +30,9 @@ all: retchmail
 #LIBS += ${EFENCE}
 LDFLAGS += -rdynamic
 
+ifneq ($(WVSTREAMS_LIB),)
 retchmail-LIBS+=$(LIBUNICONF) ${LIBWVSTREAMS} $(LIBWVUTILS)
+endif
 retchmail: retchmail.o wvpopclient.o wvsendmail.o -luniconf
 
 install: install-bin install-man

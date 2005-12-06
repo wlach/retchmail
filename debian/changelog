@@ -1,3 +1,9 @@
+retchmail (1:1.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Simon Law <sfllaw@debian.org>  Tue, 22 Nov 2005 20:58:10 -0500
+
 retchmail (1:0.09-3) unstable; urgency=low
 
   * Update config documentation. (Closes: #302884)

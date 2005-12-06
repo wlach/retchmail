@@ -203,7 +203,8 @@ int main(int argc, char **argv)
 		    "Use <moniker> instead of ini:~/.retchmail/retchmail",
 		    "moniker", confmoniker);
     
-    args.set_version("Retchmail version " RETCHMAIL_VER_STRING "\n");
+    args.set_version("Retchmail version " RETCHMAIL_VER_STRING);
+    args.set_email("<wvstreams-dev@lists.nit.ca>");
     
     WvStringList arguments;
     if (!args.process(argc, argv, &arguments))

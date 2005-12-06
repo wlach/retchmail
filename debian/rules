@@ -11,6 +11,7 @@ build: build-stamp
 build-stamp:
 	dh_testdir
 	$(MAKE) prefix=/usr \
+		VERBOSE=1 \
 		CXXOPTS="-fno-implement-inlines -fno-rtti -fno-exceptions"
 	touch build-stamp
 
