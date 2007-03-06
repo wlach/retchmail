@@ -160,7 +160,7 @@ static bool inc_log_level_cb(void *userdata)
 
 int main(int argc, char **argv)
 {
-    bool flush = false, explode = false;
+    bool flush = false, explode = false, single_stream = false;
     WvLog::LogLevel lvl = WvLog::Debug1;
     WvString deliverto("");
     WvString confmoniker("");
@@ -205,6 +205,10 @@ int main(int argc, char **argv)
     
     args.set_version("Retchmail version " RETCHMAIL_VER_STRING);
     args.set_email("<wvstreams-dev@lists.nit.ca>");
+
+    args.add_set_bool_option('s', "singlestream", 
+			     "Use only one TCP stream",
+			     single_stream);
     
     WvStringList arguments;
     if (!args.process(argc, argv, &arguments))
@@ -255,6 +259,9 @@ int main(int argc, char **argv)
     bool safemode = cfg["retchmail"]["Safe Mode"].getmeint(0);
     bool ignorerp = cfg["retchmail"]["Ignore Return-Path"].getmeint(0);
   
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     if (arguments.isempty())	    
     {
         UniConf sect = cfg["POP Servers"];
@@ -271,6 +278,9 @@ int main(int argc, char **argv)
 			     explode ? : cfg["Explode"][i->key()].getmeint(0),
 			     safemode, ignorerp);
 		WvIStreamList::globallist.append(cli, true, "client");
+                if (single_stream)
+                    while (!WvIStreamList::globallist.isempty() && !want_to_die)
+    	                WvIStreamList::globallist.runonce();
 	    }
 	}
 	else
@@ -304,14 +314,15 @@ int main(int argc, char **argv)
 			 flush, apop_enable, apop_enable_fallback, explode,
 			 safemode, ignorerp);
 	    WvIStreamList::globallist.append(cli, true, "client");
+            if (single_stream)
+                while (!WvIStreamList::globallist.isempty() && !want_to_die)
+    	            WvIStreamList::globallist.runonce();
 	}
     }
     
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    
-    while (!WvIStreamList::globallist.isempty() && !want_to_die)
-    	WvIStreamList::globallist.runonce();
+    if (!single_stream)
+        while (!WvIStreamList::globallist.isempty() && !want_to_die)
+    	    WvIStreamList::globallist.runonce();
 
     lockfile.unlock();
 }
