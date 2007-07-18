@@ -1,9 +1,3 @@
-Retchmail v0.1
-Release Date: January 2002
-Authors: Avery Pennarun <apenwarr@nit.ca>
-         Patrick Patterson <ppatters@nit.ca>
-
------------------------------------------------------------------------
 Retchmail is intended as a blazingly fast replacement for ESR's Fetchmail.
 For a much more in depth overview of the philosophy behind this program,
 please read apenwarr's ANNOUNCEment for the program, which should be
@@ -12,10 +6,10 @@ found in the same directory as this file.
 For a quick overview of the functionality, please see the retchmail(1) man
 page, which should get you started.
 
-Questions, comments, feature requests, and especially patches should be
-directed to the retchmail mailing list:
+Questions, comments, feature requests, and especially patches are welcome.
+Please see the Retchmail web page for more information:
 
-retchmail-list@lists.nit.ca
+http://alumnit.ca/wiki/index.php?page=RetchMail
 
 This program is Copyright 2002-2003 Net Integration Technologies Inc.
 

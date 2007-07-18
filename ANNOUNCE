@@ -24,7 +24,7 @@ wire, but so is the rest of your mail.
 
 2. Where can I get it?
 
-http://open.nit.ca/retchmail/
+http://alumnit.ca/wiki/index.php?page=DownloadReleases
 
 
 3. What exactly do you mean by "stupidly" fast?
@@ -189,8 +189,9 @@ No.
 First, Eric Raymond wrote fetchmail, which was really the inspiration for
 retchmail. And I mean that in the nicest possible way.
 
-Avery Pennarun <apenwarr@nit.ca> wrote the first version of retchmail and
+Avery Pennarun <apenwarr@gmail.com> wrote the first version of retchmail and
 started this FAQ. When I say "I", I mean me, Avery.
 
-Patrick Patterson <ppatters@nit.ca> added the SSL support and keeps track of
-public releases, since Avery is too busy/lazy.
+Since then, many others have contributed to Retchmail. See the AUTHORS file
+inside the distribution for details.
+
