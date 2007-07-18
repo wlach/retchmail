@@ -142,7 +142,7 @@ static WvPopClient *newpop(WvStringParm acct,
 
 static bool dec_log_level_cb(void *userdata)
 {
-    WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
+    WvLog::LogLevel &level = *static_cast<WvLog::LogLevel *>(userdata);
     if ((int)level > (int)WvLog::Critical)
 	level = (WvLog::LogLevel)((int)level - 1);
     return true;
@@ -151,7 +151,7 @@ static bool dec_log_level_cb(void *userdata)
 
 static bool inc_log_level_cb(void *userdata)
 {
-    WvLog::LogLevel level = *static_cast<WvLog::LogLevel *>(userdata);
+    WvLog::LogLevel &level = *static_cast<WvLog::LogLevel *>(userdata);
     if ((int)level < (int)WvLog::Debug5)
 	level = (WvLog::LogLevel)((int)level + 1);
     return true;
