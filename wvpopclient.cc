@@ -223,9 +223,12 @@ void WvPopClient::execute()
 	|| (!response() && apop_enable_fallback))
     {
         // USER/PASS login
+        // some providers (i.e.: gmail) get unhappy if you send the user+pass
+        // together, so wait for a response to the user cmd before sending
+        // password.
         cmd("user %s", username);
-        cmd("pass %s", password);
         if (!response()) goto fail;
+        cmd("pass %s", password);
         if (!response())
         {
            seterr("Server denied access.  Wrong password?");
