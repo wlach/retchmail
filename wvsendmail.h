@@ -18,7 +18,8 @@ public:
     WvSendmailProc(const char **argv, int _c, const WvSendmailCallback &_cb);
     virtual ~WvSendmailProc();
     
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
+    virtual bool post_select(SelectInfo &si);
     virtual bool isok() const;
     virtual size_t uwrite(const void *buf, size_t count);
     virtual void execute();

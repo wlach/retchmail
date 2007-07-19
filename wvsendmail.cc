@@ -25,13 +25,26 @@ WvSendmailProc::~WvSendmailProc()
 }
 
 
-bool WvSendmailProc::pre_select(SelectInfo &si)
+void WvSendmailProc::pre_select(SelectInfo &si)
 {
-    bool must = false;
-
     if (is_done && !exited && si.msec_timeout > 20)
 	si.msec_timeout = 20;
     
+    if (child_exited() && !exited && is_done)
+	si.msec_timeout = 0;
+    
+    // another hack because isok() returns true when it shouldn't really
+    if ((exited || is_done) && si.wants.writable)
+	si.msec_timeout = 0;
+    
+    WvPipe::pre_select(si);
+}
+
+
+bool WvSendmailProc::post_select(SelectInfo &si)
+{
+    bool must = false;
+
     if (child_exited() && !exited && is_done)
     {
 	exited = true;
@@ -40,7 +53,6 @@ bool WvSendmailProc::pre_select(SelectInfo &si)
 	if (cb)
 	    cb(count, !exit_status());
 	
-	si.msec_timeout = 0;
 	must = true;
     }
     
@@ -48,7 +60,7 @@ bool WvSendmailProc::pre_select(SelectInfo &si)
     if ((exited || is_done) && si.wants.writable)
 	must = true;
     
-    return must || WvPipe::pre_select(si);
+    return must || WvPipe::post_select(si);
 }
 
 

@@ -159,13 +159,24 @@ static int messcompare(const WvPopClient::MsgInfo *a,
 }
 
 
-bool WvPopClient::pre_select(SelectInfo &si)
+void WvPopClient::pre_select(SelectInfo &si)
+{
+    bool oldrd = si.wants.readable;
+
+    if (never_select)
+	si.wants.readable = false;
+    WvStreamClone::pre_select(si);
+    si.wants.readable = oldrd;
+}
+
+
+bool WvPopClient::post_select(SelectInfo &si)
 {
     bool val, oldrd = si.wants.readable;
 
     if (never_select)
 	si.wants.readable = false;
-    val = WvStreamClone::pre_select(si);
+    val = WvStreamClone::post_select(si);
     si.wants.readable = oldrd;
     return val;
 }

@@ -65,7 +65,8 @@ public:
     virtual ~WvPopClient();
 
     bool never_select;
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
+    virtual bool post_select(SelectInfo &si);
     virtual void execute();
     
     void cmd(WvStringParm s);
