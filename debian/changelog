@@ -1,3 +1,9 @@
+retchmail (1:1.1-1) unstable; urgency=low
+
+  * New upstream version.  (Closes: #407873)
+
+ -- William Lachance <wrlach@gmail.com>  Thu, 19 Jul 2007 19:30:09 -0400
+
 retchmail (1:1.0-1) unstable; urgency=low
 
   * New upstream version.
