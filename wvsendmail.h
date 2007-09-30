@@ -5,7 +5,7 @@
 #include "wvcallback.h"
 
 // parameters are: int mess_index, bool success
-typedef WvCallback<void, int, bool> WvSendmailCallback;
+typedef wv::function<void(int, bool)> WvSendmailCallback;
 
 class WvSendmailProc : public WvPipe
 {
