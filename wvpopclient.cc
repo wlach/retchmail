@@ -150,12 +150,12 @@ bool WvPopClient::response()
 }
 
 
-static int messcompare(const WvPopClient::MsgInfo *a,
-		       const WvPopClient::MsgInfo *b)
+static bool messcompare(const WvPopClient::MsgInfo &a,
+			const WvPopClient::MsgInfo &b)
 {
-    long base = 10240;
-    long alen = a->len / base, blen = b->len / base;
-    return (alen*base + a->num) - (blen*base + b->num);
+    const long base = 10240;
+    long alen = a.len / base, blen = b.len / base;
+    return ((alen * base + a.num) - (blen * base + b.num)) < 0;
 }
 
 
@@ -254,17 +254,17 @@ void WvPopClient::execute()
     log(WvLog::Info, "%s %s in %s bytes.\n", res1,
 	res1==1 ? "message" : "messages", res2);
     nmsgs = res1;
-    mess.set_capacity(nmsgs);
+    mess.reserve(nmsgs);
     
     // get the list of messages and their sizes
     if (!response()) goto fail;
     for (count = 0; count < nmsgs; count++)
     {
 	line = blocking_getline(60*1000);
-	mess.append(new MsgInfo(), true);
+	mess.push_back(MsgInfo());
 	if (!isok() || !line || 
 	    sscanf(line, "%d %ld",
-		   &(mess[count]->num), &(mess[count]->len)) != 2)
+		   &(mess[count].num), &(mess[count].len)) != 2)
 	{
 	    log(WvLog::Error, "Invalid LIST response: '%s'\n", line);
 	    goto fail;
@@ -278,16 +278,16 @@ void WvPopClient::execute()
     }
 
     // sort the list in order of size
-    mess.qsort(messcompare);
+    std::sort(mess.begin(), mess.end(), messcompare);
 
     while (next_ack < nmsgs 
-	   || (next_ack && mess[next_ack-1]->deletes_after_this)
+	   || (next_ack && mess[next_ack-1].deletes_after_this)
 	   || sendmails || safe_deletes.count() > 0)
     {
 	if (!isok()) break;
 	log(WvLog::Debug4, "next_ack=%s/%s dels=%s sendmails=%s/%s\n",
 	    next_ack, nmsgs,
-	    mess[0]->deletes_after_this, sendmails,
+	    mess[0].deletes_after_this, sendmails,
 	    WvSendmailProc::num_sendmails);
 
 	// do any necessary safe deletes
@@ -311,13 +311,13 @@ void WvPopClient::execute()
 
 	while (next_req < nmsgs && next_req-next_ack < max_requests)
 	{
-	    cmd("retr %s", mess[next_req]->num);
+	    cmd("retr %s", mess[next_req].num);
 	    next_req++;
 	}
     
-	MsgInfo *m = mess[next_ack];
+	MsgInfo *m = &mess[next_ack];
 	
-	while (next_ack > 0 && mess[next_ack-1]->deletes_after_this)
+	while (next_ack > 0 && mess[next_ack-1].deletes_after_this)
 	{
 	    if (!response())
 	    {
@@ -328,7 +328,7 @@ void WvPopClient::execute()
 		flushing = false;
 	    }
 	   
-	    mess[next_ack-1]->deletes_after_this--;
+	    mess[next_ack-1].deletes_after_this--;
 	    
 	    if (!isok())
 		goto fail;
@@ -369,7 +369,7 @@ void WvPopClient::execute()
 	    size = WvString("%sb", m->len);
 	
 	log(WvLog::Debug1, "%-6s %6s ", 
-	    WvString("[%s]", mess[next_ack-1]->num), size);
+	    WvString("[%s]", mess[next_ack-1].num), size);
 	
 	from = "";
 	subj = "";
@@ -543,11 +543,11 @@ void WvPopClient::send_done(int count, bool success)
     if (!success)
     {
 	log(WvLog::Warning, "Error delivering message %s to the MDA.\n",
-	    mess[count]->num);
+	    mess[count].num);
     }
     else
     {
-	mess[count]->sent = true;
+	mess[count].sent = true;
 	
 	// remember that we had one more delete message after the most recent
 	// request (which might have no relation to the message we're deleting,
@@ -558,14 +558,14 @@ void WvPopClient::send_done(int count, bool success)
 	    if (safemode)
 	    {
 	        log(WvLog::Debug3, "Queueing message %s for deletion\n",
-			mess[count]->num);
+			mess[count].num);
 		safe_deletes.append(
-			new WvString("dele %s", mess[count]->num), true);
+			new WvString("dele %s", mess[count].num), true);
 	    }
 	    else
 	    {
-	        cmd("dele %s", mess[count]->num);
-	        mess[next_req-1]->deletes_after_this++;
+	        cmd("dele %s", mess[count].num);
+	        mess[next_req-1].deletes_after_this++;
 	    }
 	}
     }
@@ -574,4 +574,5 @@ void WvPopClient::send_done(int count, bool success)
     // to finish.
     never_select = false;
 }
+
 

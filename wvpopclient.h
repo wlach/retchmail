@@ -7,13 +7,13 @@
  * This code is LGPL - see the file COPYING.LIB for a full copy of the
  * license.
  */
+#include <vector>
 
 #include "wvsendmail.h"
 #include "wvstreamclone.h"
 #include "wvstring.h"
 #include "wvhashtable.h"
 #include "wvlog.h"
-#include "wvvector.h"
 
 #ifndef WVPOPCLIENT_H
 #define WVPOPCLIENT_H 1
@@ -52,8 +52,7 @@ public:
 	{
 	}
     };
-    DeclareWvVector(MsgInfo);
-    MsgInfoVector mess;
+    std::vector<MsgInfo> mess;
 
     // note: we take possession of 'conn' and may delete it at any time!
     WvPopClient(WvStream *conn,
