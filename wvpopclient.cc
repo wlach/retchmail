@@ -399,7 +399,7 @@ void WvPopClient::execute()
 	  {
 	    p = new WvSendmailProc(argv, next_ack-1,
 				   wv::bind(&WvPopClient::send_done, this,
-					    wv::_1, wv::_2));
+					    _1, _2));
 	    sendmails++;
 	  }
 	
@@ -463,7 +463,7 @@ void WvPopClient::execute()
 		const char *argvE[] = {mda, sendto, NULL};
 		p = new WvSendmailProc(argvE, next_ack-1,
 				       wv::bind(&WvPopClient::send_done, this,
-						wv::_1, wv::_2));
+						_1, _2));
 		sendmails++;
 	    }
 	    else if (in_head && !strncasecmp(line, "Subject: ", 9))
