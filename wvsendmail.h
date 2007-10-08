@@ -2,7 +2,7 @@
 #define WVSENDMAIL_H 1
 
 #include "wvpipe.h"
-#include "wvcallback.h"
+#include "wvtr1.h"
 
 // parameters are: int mess_index, bool success
 typedef wv::function<void(int, bool)> WvSendmailCallback;
