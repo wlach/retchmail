@@ -1,21 +1,24 @@
 
 prefix=/usr/local
-WVSTREAMS_INC=
-WVSTREAMS_LIB=
-WVSTREAMS_BIN=$(prefix)/bin
-WVSTREAMS_SRC=.
 
-PC_CFLAGS=$(shell pkg-config --cflags libwvstreams)
-ifeq ($(PC_CFLAGS),)
- $(error WvStreams does not appear to be installed)
-endif
-CPPFLAGS+=$(PC_CFLAGS)
+ifeq ($(WVSTREAMS),)
+    WVSTREAMS_INC=
+    WVSTREAMS_LIB=
+    WVSTREAMS_BIN=$(prefix)/bin
+    WVSTREAMS_SRC=.
 
-PC_LIBS=$(shell pkg-config --libs libwvstreams)
-ifeq ($(PC_LIBS),)
- $(error WvStreams does not appear to be installed)
+    PC_CFLAGS=$(shell pkg-config --cflags libwvstreams)
+    ifeq ($(PC_CFLAGS),)
+     $(error WvStreams does not appear to be installed)
+    endif
+    CPPFLAGS+=$(PC_CFLAGS)
+
+    PC_LIBS=$(shell pkg-config --libs libwvstreams)
+    ifeq ($(PC_LIBS),)
+     $(error WvStreams does not appear to be installed)
+    endif
+    LIBS+=$(PC_LIBS)
 endif
-LIBS+=$(PC_LIBS)
 
 include wvrules.mk
 
@@ -27,8 +30,9 @@ LDFLAGS += -rdynamic
 
 ifneq ($(WVSTREAMS_LIB),)
 retchmail-LIBS+=$(LIBUNICONF) ${LIBWVSTREAMS} $(LIBWVUTILS)
-endif
+else
 retchmail: LDFLAGS=-luniconf
+endif
 retchmail: retchmail.o wvpopclient.o wvsendmail.o
 
 install: install-bin install-man
