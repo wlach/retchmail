@@ -1,31 +1,28 @@
+WVPACKAGE_NAME=@PACKAGE_NAME@
+WVPACKAGE_STRING=@PACKAGE_STRING@
+WVPACKAGE_TARNAME=@PACKAGE_TARNAME@
+WVPACKAGE_VERSION=@PACKAGE_VERSION@
 
 prefix=/usr/local
 
-ifeq ($(WVSTREAMS),)
-    WVSTREAMS_INC=
-    WVSTREAMS_LIB=
-    WVSTREAMS_BIN=$(prefix)/bin
-    WVSTREAMS_SRC=.
+WVSTREAMS_INC=
+WVSTREAMS_LIB=
+WVSTREAMS_BIN=$(PREFIX)/bin
+WVSTREAMS_SRC=.
 
-    PC_CFLAGS=$(shell pkg-config --cflags libwvstreams)
-    ifeq ($(PC_CFLAGS),)
-     $(error WvStreams does not appear to be installed)
-    endif
-    CPPFLAGS+=$(PC_CFLAGS)
-
-    PC_LIBS=$(shell pkg-config --libs libwvstreams)
-    ifeq ($(PC_LIBS),)
-     $(error WvStreams does not appear to be installed)
-    endif
-    LIBS+=$(PC_LIBS)
+PC_CFLAGS=$(shell pkg-config --cflags libwvstreams)
+ifeq ($(PC_CFLAGS),)
+    $(error WvStreams does not appear to be installed)
 endif
+CPPFLAGS+=$(PC_CFLAGS)
+
+PC_LIBS=$(shell pkg-config --libs libwvstreams)
+ifeq ($(PC_LIBS),)
+    $(error WvStreams does not appear to be installed)
+endif
+LIBS+=$(PC_LIBS)
 
 include wvrules.mk
-include config.mk
-
-config.mk:
-	@echo "Please run ./configure. Stop."
-	@exit 1
 
 default: retchmail
 all: retchmail
@@ -57,6 +54,6 @@ clean:
 	rm -f retchmail
 
 distclean:
-	rm -f version.h config.mk
+	rm -f version.h Makefile
 
 .PHONY: install install-bin install-man clean distclean

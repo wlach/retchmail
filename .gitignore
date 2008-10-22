@@ -4,6 +4,6 @@
 .libs
 /CC
 /CXX
-config.mk
+Makefile
 retchmail
 version.h
