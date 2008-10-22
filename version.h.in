@@ -1,6 +1,6 @@
 #ifndef __VERSION_H
 #define __VERSION_H
 
-#define RETCHMAIL_VER_STRING		"1.1"
+#define RETCHMAIL_VER_STRING		"@PACKAGE_VERSION@"
 
 #endif // __VERSION_H

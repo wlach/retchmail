@@ -4,4 +4,6 @@
 .libs
 /CC
 /CXX
+config.mk
 retchmail
+version.h

@@ -21,6 +21,11 @@ ifeq ($(WVSTREAMS),)
 endif
 
 include wvrules.mk
+include config.mk
+
+config.mk:
+	@echo "Please run ./configure. Stop."
+	@exit 1
 
 default: retchmail
 all: retchmail
