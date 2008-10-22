@@ -204,7 +204,6 @@ int main(int argc, char **argv)
 		    "moniker", confmoniker);
     
     args.set_version("Retchmail version " RETCHMAIL_VER_STRING);
-    args.set_email("<wvstreams-dev@lists.nit.ca>");
 
     args.add_set_bool_option('s', "singlestream", 
 			     "Use only one TCP stream",
