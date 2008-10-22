@@ -56,4 +56,7 @@ install-man:
 clean:
 	rm -f retchmail
 
-.PHONY: install install-bin install-man clean
+distclean:
+	rm -f version.h config.mk
+
+.PHONY: install install-bin install-man clean distclean
