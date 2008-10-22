@@ -12,7 +12,6 @@
 #include "strutils.h"
 #include "uniconfroot.h"
 #include "wvlockfile.h"
-#include "wvver.h"
 #include "wvtcp.h"
 #include "wvlog.h"
 #include "wvpipe.h"
@@ -25,6 +24,7 @@
 #include "wvhex.h"
 
 // Retchmail headers
+#include "version.h"
 #include "wvsendmail.h"
 #include "wvpopclient.h"
 

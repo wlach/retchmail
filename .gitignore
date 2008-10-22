@@ -1,0 +1,7 @@
+*.[oa]
+*~
+.*.d
+.libs
+/CC
+/CXX
+retchmail
